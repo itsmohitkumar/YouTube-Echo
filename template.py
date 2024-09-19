@@ -22,7 +22,7 @@ list_of_files = [
     "tests/test_utils.py",             # Test case for utility functions
     "app.py",                          # Entry point for the application or API
     "static/.gitkeep",                 # Keeps the static folder in Git (for CSS, JS)
-    "templates/index.html"             # HTML template for the web interface
+    "templates/index.html",             # HTML template for the web interface
     "README.md"                        # README file for project documentation
 ]
 
