@@ -1,0 +1,40 @@
+{
+    "app_title": "AI YouTube Video Summarizer",
+    "github_repo_links": {
+        "main": "https://github.com/sudoleg/ytai",
+        "summary": "https://github.com/sudoleg/ytai/blob/main/pages/summary.py",
+        "chat": "https://github.com/sudoleg/ytai/blob/main/pages/chat.py"
+    },
+    "default_model": {
+        "embeddings": "text-embedding-3-small",
+        "gpt": "gpt-4o-mini"
+    },
+    "available_models": {
+        "embeddings": [
+            "text-embedding-3-small",
+            "text-embedding-3-large",
+            "text-embedding-ada-002"
+        ],
+        "gpts": [
+            "gpt-4o-mini",
+            "gpt-3.5-turbo",
+            "gpt-4o",
+            "gpt-4",
+            "gpt-4-turbo"
+        ]
+    },
+    "temperature": 1.0,
+    "top_p": 1.0,
+    "help_texts": {
+        "youtube_url": "Copy directly from the adress bar or use the 'Share' button.",
+        "custom_prompt": "You can ask a specific question, require a more detailed summary, create a plan, specify the format etc.",
+        "model": "The OpenAI API is powered by a diverse set of models with different capabilities and price points. You can only choose from models that are available to you (with your API key). Read more at https://platform.openai.com/docs/models/overview",
+        "temperature": "In short, the lower the temperature, the more deterministic the results in the sense that the highest probable next token is always picked. Increasing temperature could lead to more randomness, which encourages more diverse or creative outputs. Read more at https://platform.openai.com/docs/guides/text-generation/how-should-i-set-the-temperature-parameter.",
+        "top_p": "If you use Top P it means that only the tokens comprising the top_p probability mass are considered for responses, so a low top_p value selects the most confident responses. This means that a high top_p value will enable the model to look at more possible words, including less likely ones, leading to more diverse outputs. Read more at https://www.promptingguide.ai/introduction/settings",
+        "saving_responses": "Whether to save responses in the directory, where you run the app. The responses will be saved under '<YT-channel-name>/<video-title>.md'.",
+        "chunk_size": "Larger chunk sizes (512-1024) are more likely to encompass all necessary information, but may include some irrelevant information along with the relevant parts. Smaller chunk sizes (128-256) provide more granular chunks of information, but risk missing important context. In this app, the context provided to the model is roughly the same for all chunk sizes, because smaller chunk sizes are compensated through retrieving more chunks and vice versa. If you want to dig deeper into the question of optimal chunk size, see my Perplexity thread: https://www.perplexity.ai/search/larger-vs-smaller-chunk-sizes-F8pU0.fGTBGeXUrKsCKFzA#0",
+        "preprocess_checkbox": "Check this if you want to transcribe the video using OpenAI's Whisper base model. This may improve the results, especially for videos with automatically generated transcripts. However, it results in substantially longer preprocessing time, as the transcription is pretty time-consuming. There are no additional costs!",
+        "selected_video": "Once you process a video, it gets saved in a database. You can chat with it at any time, without processing it again! Tip: you may also search for videos by typing (parts of) its title.",
+        "embeddings": "Embeddings are a numerical representation of text that can be used to measure the relatedness between two pieces of text. Embedding models create these numerical representations. Read more at https://platform.openai.com/docs/models/embeddings"
+    }
+}
