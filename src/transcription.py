@@ -1,7 +1,7 @@
 import whisper
 import os
 import logging
-from modules.youtube import get_video_metadata
+from src.youtube import get_video_metadata
 from pytubefix import YouTube
 from typing import Optional
 

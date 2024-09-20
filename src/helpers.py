@@ -4,18 +4,8 @@ import os
 import re
 from pathlib import Path
 from typing import List, Literal
-
 import openai
-import streamlit as st
 import tiktoken
-
-
-def is_api_key_set() -> bool:
-    """Checks whether the OpenAI API key is set in streamlit's session state or as environment variable."""
-    if os.getenv("OPENAI_API_KEY") or "openai_api_key" in st.session_state:
-        return True
-    return False
-
 
 def is_api_key_valid(api_key: str):
     """

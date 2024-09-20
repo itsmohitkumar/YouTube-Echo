@@ -1,6 +1,5 @@
 import json
 import logging
-
 from requests import api
 from requests.exceptions import RequestException
 from youtube_transcript_api import (
@@ -9,7 +8,6 @@ from youtube_transcript_api import (
     YouTubeTranscriptApi,
 )
 from youtube_transcript_api.formatters import TextFormatter
-
 from .helpers import (
     extract_youtube_video_id,
     get_preffered_languages,
@@ -17,7 +15,6 @@ from .helpers import (
 )
 
 OEMBED_PROVIDER = "https://noembed.com/embed"
-
 
 class NoTranscriptReceivedException(Exception):
     def __init__(self, url: str):

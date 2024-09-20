@@ -10,7 +10,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from modules.helpers import num_tokens_from_string
+from src.helpers import num_tokens_from_string
 
 CHUNK_SIZE_FOR_UNPROCESSED_TRANSCRIPT = 512
 

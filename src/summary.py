@@ -2,7 +2,6 @@ import logging
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
-
 from .helpers import num_tokens_from_string
 
 SYSTEM_PROMPT = """You are an expert in processing video transcripts according to the user's request. 
