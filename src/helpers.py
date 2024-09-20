@@ -137,7 +137,7 @@ class LanguagePreferences:
         Returns:
             list: A list of preferred language codes.
         """
-        return ["en-US", "en", "de"]
+        return ["en-US", "en", "de", "hi"]
 
 
 class TranscriptProcessor:
