@@ -2,94 +2,108 @@ import json
 import logging
 import os
 import re
-from pathlib import Path
-from typing import List, Literal
-import openai
 import tiktoken
+import logging
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
 
-def is_api_key_valid(api_key: str):
+SYSTEM_PROMPT = """You are an expert in processing video transcripts according to the user's request. 
+For example, this could include summarization, question answering, or providing key insights.
+"""
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", SYSTEM_PROMPT),
+        ("user", "{input}"),
+    ]
+)
+
+# Information about OpenAI's GPT context windows
+CONTEXT_WINDOWS = {
+    "gpt-3.5-turbo": {"total": 16385, "output": 4096},
+    "gpt-4": {"total": 8192, "output": 4096},
+    "gpt-4-turbo": {"total": 128000, "output": 4096},
+    "gpt-4o": {"total": 128000, "output": 4096},
+    "gpt-4o-mini": {"total": 128000, "output": 16000},
+}
+
+
+class TranscriptTooLongForModelException(Exception):
+    """Raised when the transcript length exceeds the context window of the language model."""
+
+    def __init__(self, message: str, model_name: str):
+        super().__init__(message)
+        self.model_name = model_name
+
+    def log_error(self):
+        """Log error message with detailed exception information."""
+        logging.error("Transcript too long for %s: %s", self.model_name, self.args[0], exc_info=True)
+
+
+def get_transcript_summary(transcript_text: str, llm: ChatOpenAI, **kwargs) -> str:
     """
-    Checks the validity of an OpenAI API key.
+    Generates a summary from a video transcript using a language model.
 
     Args:
-        api_key (str): The OpenAI API key to be validated.
+        transcript_text (str): The full transcript text of the video.
+        llm (ChatOpenAI): The language model instance used for generating the summary.
+        **kwargs: Optional keyword arguments.
+            - custom_prompt (str): A custom prompt to replace the default summary request.
+
+    Raises:
+        TranscriptTooLongForModelException: If the transcript exceeds the model's context window.
 
     Returns:
-        bool: True if the API key is valid, False if the API key is invalid.
+        str: The summary or answer in markdown format.
     """
 
-    api_key_valid = os.getenv("OPENAI_API_KEY_VALID")
-    if api_key_valid:
-        return True
+    # Define the default prompt for summarizing the transcript
+    user_prompt = f"""Based on the provided transcript of the video, create a summary that accurately captures the main topics and arguments. The summary should be in whole sentences and contain no more than 300 words.
+        Additionally, extract key insights from the video to contribute to better understanding, emphasizing the main points and providing actionable advice.
+        Here is the transcript, delimited by ---
+        ---
+        {transcript_text}
+        ---
+        Answer in markdown format strictly adhering to this schema:
 
-    openai.api_key = api_key
-    try:
-        openai.models.list()
-    except openai.AuthenticationError as e:
-        logging.error(
-            "An authentication error occurred when checking API key validity: %s",
-            str(e),
+        ## <short title for the video, consisting of maximum five words>
+
+        <your summary>
+
+        ## Key insights
+
+        <unnumbered list of key insights>
+        """
+
+    # Override with a custom prompt if provided
+    if "custom_prompt" in kwargs:
+        user_prompt = f"""{kwargs['custom_prompt']}
+            Here is the transcript, delimited by ---
+            ---
+            {transcript_text}
+            ---
+            """
+
+    # Calculate the number of tokens in the transcript and the prompt
+    transcript_tokens = num_tokens_from_string(string=transcript_text, model=llm.model_name)
+    prompt_tokens = num_tokens_from_string(string=user_prompt, model=llm.model_name)
+    context_window = CONTEXT_WINDOWS[llm.model_name]["total"]
+
+    # Check if the combined token count exceeds the model's context window
+    if transcript_tokens + prompt_tokens > context_window:
+        exception_message = (
+            f"Your transcript exceeds the context window of the chosen model ({llm.model_name}), which is {context_window} tokens. "
+            "Consider the following options:\n"
+            "1. Choose another model with a larger context window (such as gpt-4o).\n"
+            "2. Use the 'Chat' feature to ask specific questions about the video, where there won't be a token limit.\n\n"
+            "You can get more information on context windows for different models in the [official OpenAI documentation about models](https://platform.openai.com/docs/models)."
         )
-        return False
-    except Exception as e:
-        logging.error(
-            "An unexpected error occurred when checking API key validity: %s",
-            str(e),
-        )
-        return False
-    else:
-        logging.info("API key validation successful")
-        os.environ["OPENAI_API_KEY_VALID"] = "yes"
-        return True
+        raise TranscriptTooLongForModelException(message=exception_message, model_name=llm.model_name)
 
-
-def get_available_models(
-    model_type: Literal["gpts", "embeddings"], api_key: str = ""
-) -> List[str]:
-    """
-    Retrieve a filtered list of available model IDs from OpenAI's API or environment variables, based on the specified model type.
-
-    Args:
-        model_type (Literal["gpts", "embeddings"]): The type of models to retrieve, such as 'gpts' or 'embeddings'.
-        api_key (str, optional): The API key for authenticating with OpenAI. Defaults to an empty string.
-
-    Returns:
-        List[str]: A filtered list of available model IDs matching the specified model type. The list is derived either from the environment variable `AVAILABLE_MODEL_IDS` if set, or from a call to OpenAI's API.
-        If an authentication error or any other exception occurs during the API call, an empty list is returned.
-    """
-    openai.api_key = api_key
-    selectable_model_ids = list(
-        get_default_config_value(f"available_models.{model_type}")
-    )
-
-    # AVAILABLE_MODEL_IDS env var stores all the model IDs available to the user as a list (separated by a comma)
-    # the env var is set programatically below
-    available_model_ids = os.getenv("AVAILABLE_MODEL_IDS")
-    if available_model_ids:
-        return filter(
-            lambda m: m in available_model_ids.split(","), selectable_model_ids
-        )
-
-    try:
-        available_model_ids: list = [model.id for model in openai.models.list()]
-    except openai.AuthenticationError as e:
-        logging.error(
-            "An authentication error occurred when fetching available models: %s",
-            str(e),
-        )
-        return []
-    except Exception as e:
-        logging.error(
-            "An unexpected error occurred when fetching available models: %s",
-            str(e),
-        )
-        return []
-    else:
-        # set the AVAILABLE_MODEL_IDS env var, so that the list of available models
-        # doesn't have to be fetched every time
-        os.environ["AVAILABLE_MODEL_IDS"] = ",".join(available_model_ids)
-        return filter(lambda m: m in available_model_ids, selectable_model_ids)
-
+    # Create the summary using the language model
+    chain = prompt | llm | StrOutputParser()
+    return chain.invoke({"input": user_prompt})
 
 def get_default_config_value(
     key_path: str,
@@ -103,7 +117,6 @@ def get_default_config_value(
 
         key_path (str): A string representing the path to the desired value within the nested JSON structure,
                         with each level separated by a '.' (e.g., "level1.level2.key").
-
 
     Returns:
         The value corresponding to the key path within the configuration file. If the key path does not exist,
@@ -127,29 +140,13 @@ def extract_youtube_video_id(url: str):
     """
     Extracts the video ID from a given YouTube URL.
 
-    The function supports various YouTube URL formats including standard watch URLs, short URLs, and embed URLs.
-
     Args:
         url (str): The YouTube URL from which the video ID is to be extracted.
 
     Returns:
         str or None: The extracted video ID as a string if the URL is valid and the video ID is found, otherwise None.
-
-    Example:
-        >>> extract_youtube_video_id("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
-        'dQw4w9WgXcQ'
-        >>> extract_youtube_video_id("https://youtu.be/dQw4w9WgXcQ")
-        'dQw4w9WgXcQ'
-        >>> extract_youtube_video_id("https://www.youtube.com/embed/dQw4w9WgXcQ")
-        'dQw4w9WgXcQ'
-        >>> extract_youtube_video_id("This is not a valid YouTube URL")
-        None
-
-    Note:
-        This function uses regular expressions to match the URL pattern and extract the video ID. It is designed to
-        accommodate most common YouTube URL formats, but may not cover all possible variations.
     """
-    pattern = r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})"
+    pattern = r"(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})"
     match = re.search(pattern, url)
     if match:
         return match.group(1)
@@ -167,38 +164,26 @@ def save_response_as_file(
         filename (str): The name of the file without extension.
         file_content: The content to be saved. Can be a string for text or Markdown, or a dictionary/list for JSON.
         content_type (str): The type of content: "text" for plain text, "json" for JSON format, or "markdown" for Markdown format. Defaults to "text".
-
-    The function creates the directory if it doesn't exist. It saves `file_content` in a file named `filename`
-    within that directory, adding the appropriate extension (.txt for plain text, .json for JSON, .md for Markdown) based on `content_type`.
     """
-
-    # Sanitize the filename by replacing slashes with underscores
     filename = filename.replace("/", "_").replace("\\", "_")
-
-    # Create the directory if it does not exist
     os.makedirs(dir_name, exist_ok=True)
 
-    # Adjust the filename extension based on the content type
     extensions = {"text": ".txt", "json": ".json", "markdown": ".md"}
     file_extension = extensions.get(content_type, ".txt")
     filename += file_extension
 
-    # Construct the full path for the file
     file_path = os.path.join(dir_name, filename)
 
-    # Write the content to the file, formatting it according to the content type
     with open(file_path, "w", encoding="utf-8") as file:
         if content_type == "json":
             json.dump(file_content, file, indent=4)
         else:
             file.write(file_content)
 
-    # Log the full path of the saved file
     logging.info("File saved at: %s", file_path)
 
 
 def get_preffered_languages():
-    # TODO: return from configuration object or config.json
     return ["en-US", "en", "de"]
 
 
@@ -209,12 +194,11 @@ def num_tokens_from_string(string: str, model: str = "gpt-4o-mini") -> int:
     Args:
         string (str): The string to count tokens in.
         model (str): Name of the model. Default is 'gpt-4o-mini'
-
-    See https://cookbook.openai.com/examples/how_to_count_tokens_with_tiktoken
     """
     encoding_name = tiktoken.encoding_name_for_model(model_name=model)
     encoding = tiktoken.get_encoding(encoding_name)
     return len(encoding.encode(string))
+
 
 def is_environment_prod():
     if os.getenv("ENVIRONMENT") == "production":

@@ -9,7 +9,6 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
 from src.helpers import num_tokens_from_string
 
 CHUNK_SIZE_FOR_UNPROCESSED_TRANSCRIPT = 512
@@ -18,7 +17,6 @@ CHUNK_SIZE_FOR_UNPROCESSED_TRANSCRIPT = 512
 CHUNK_SIZE_TO_K_MAPPING = {1024: 3, 512: 5, 256: 10, 128: 20}
 
 RAG_SYSTEM_PROMPT = """You are an expert in answering questions and providing information about a topic.
-
 You are going to receive excerpts from a video transcript as context. Furthermore, a user will provide a question or a topic.
 If you receive a question, give a detailed answer. If you receive a topic, tell the user what is said about the topic.
 In either case, keep your answer grounded solely in the facts of the context.
@@ -38,7 +36,6 @@ rag_prompt = ChatPromptTemplate.from_messages(
         ("user", "{input}"),
     ]
 )
-
 
 def split_text_recursively(
     transcript_text: str,
@@ -60,11 +57,9 @@ def split_text_recursively(
     )
     return splits
 
-
 def format_docs_for_context(docs: List[Document]) -> str:
     """Formats documents for context by joining their contents with separators."""
     return "\n\n---\n\n".join(doc.page_content for doc in docs)
-
 
 def embed_excerpts(
     collection: Collection, excerpts: List[Document], embeddings: Embeddings
@@ -98,7 +93,6 @@ def find_relevant_documents(query: str, db: Chroma, k: int = 3) -> List[Document
     """
     retriever = db.as_retriever(search_kwargs={"k": k})
     return retriever.invoke(input=query)
-
 
 def generate_response(question: str, llm: BaseChatModel, relevant_docs: List[Document]) -> str:
     """Generates a response from the LLM based on the question and relevant documents."""
