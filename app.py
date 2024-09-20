@@ -7,18 +7,17 @@ from dotenv import load_dotenv
 from langchain_community.callbacks.openai_info import OpenAICallbackHandler
 from langchain_openai import ChatOpenAI
 from src.helpers import (
-    TranscriptTooLongForModelException,
-    get_transcript_summary,
+    TranscriptException,
+    TranscriptProcessor,
 )
 from src.helpers import (
-    get_default_config_value,
-    save_response_as_file,
+    ConfigManager,
+    FileManager,
 )
 from src.youtube import (
     InvalidUrlException,
     NoTranscriptReceivedException,
-    fetch_youtube_transcript,
-    get_video_metadata,
+    YouTubeTranscriptManager,
 )
 
 # Load environment variables from a .env file
@@ -43,7 +42,7 @@ def get_available_models(model_type: Literal["gpts", "embeddings"], api_key: str
     based on the specified model type.
     """
     openai.api_key = api_key
-    selectable_model_ids = list(get_default_config_value(f"available_models.{model_type}"))
+    selectable_model_ids = list(ConfigManager.get_default_config_value(f"available_models.{model_type}"))
 
     available_model_ids = os.getenv("AVAILABLE_MODEL_IDS")
     if available_model_ids:
@@ -82,14 +81,14 @@ def is_api_key_set() -> bool:
 def is_temperature_and_top_p_altered() -> bool:
     """Check if both temperature and top_p settings are altered from their default values."""
     return (
-        st.session_state.temperature != get_default_config_value("temperature") and
-        st.session_state.top_p != get_default_config_value("top_p")
+        st.session_state.temperature != ConfigManager.get_default_config_value("temperature") and
+        st.session_state.top_p != ConfigManager.get_default_config_value("top_p")
     )
 
 def display_model_settings_sidebar():
     """Display the sidebar for adjusting model settings."""
     if "model" not in st.session_state:
-        st.session_state.model = get_default_config_value("default_model.gpt")
+        st.session_state.model = ConfigManager.get_default_config_value("default_model.gpt")
 
     with st.sidebar:
         st.header("Model settings")
@@ -97,7 +96,7 @@ def display_model_settings_sidebar():
             label="Select a large language model",
             options=get_available_models(model_type="gpts", api_key=st.session_state.openai_api_key),
             key="model",
-            help=get_default_config_value("help_texts.model"),
+            help=ConfigManager.get_default_config_value("help_texts.model"),
         )
         st.slider(
             label="Adjust temperature",
@@ -105,8 +104,8 @@ def display_model_settings_sidebar():
             max_value=2.0,
             step=0.1,
             key="temperature",
-            value=get_default_config_value("temperature"),
-            help=get_default_config_value("help_texts.temperature"),
+            value=ConfigManager.get_default_config_value("temperature"),
+            help=ConfigManager.get_default_config_value("help_texts.temperature"),
         )
         st.slider(
             label="Adjust Top P",
@@ -114,15 +113,15 @@ def display_model_settings_sidebar():
             max_value=1.0,
             step=0.1,
             key="top_p",
-            value=get_default_config_value("top_p"),
-            help=get_default_config_value("help_texts.top_p"),
+            value=ConfigManager.get_default_config_value("top_p"),
+            help=ConfigManager.get_default_config_value("help_texts.top_p"),
         )
         if is_temperature_and_top_p_altered():
             st.warning(
                 "OpenAI generally recommends altering temperature or top_p but not both. "
                 "See their [API reference](https://platform.openai.com/docs/api-reference/chat/create#chat-create-temperature)"
             )
-        if model != get_default_config_value("default_model.gpt"):
+        if model != ConfigManager.get_default_config_value("default_model.gpt"):
             st.warning(
                 "More advanced models (like gpt-4 and gpt-4o) have better reasoning capabilities and larger context windows. "
                 "However, they likely won't make a big difference for short videos and simple tasks, like plain summarization. "
@@ -132,7 +131,7 @@ def display_model_settings_sidebar():
 def display_link_to_repo(view: str = "main"):
     """Display a link to the source code repository in the sidebar."""
     st.sidebar.write(
-        f"[View the source code]({get_default_config_value(f'github_repo_links.{view}')})"
+        f"[View the source code]({ConfigManager.get_default_config_value(f'github_repo_links.{view}')})"
     )
 
 def display_video_url_input(label: str = "Enter URL of the YouTube video:", disabled=False):
@@ -141,7 +140,7 @@ def display_video_url_input(label: str = "Enter URL of the YouTube video:", disa
         label=label,
         key="url_input",
         disabled=disabled,
-        help=get_default_config_value("help_texts.youtube_url"),
+        help=ConfigManager.get_default_config_value("help_texts.youtube_url"),
     )
 
 def display_nav_menu():
@@ -198,7 +197,7 @@ if __name__ == "__main__":
         st.sidebar.checkbox(
             label="Save responses",
             value=False,
-            help=get_default_config_value("help_texts.saving_responses"),
+            help=ConfigManager.get_default_config_value("help_texts.saving_responses"),
             key="save_responses",
         )
         
@@ -209,12 +208,12 @@ if __name__ == "__main__":
             custom_prompt = st.text_area(
                 "Enter a custom prompt if you want:",
                 key="custom_prompt_input",
-                help=get_default_config_value("help_texts.custom_prompt"),
+                help=ConfigManager.get_default_config_value("help_texts.custom_prompt"),
             )
             summarize_button = st.button("Summarize", key="summarize_button")
             if url_input:
                 try:
-                    vid_metadata = get_video_metadata(url_input)
+                    vid_metadata = YouTubeTranscriptManager.get_video_metadata(url_input)
                     if vid_metadata:
                         st.subheader(
                             f"'{vid_metadata['name']}' from {vid_metadata['channel']}.",
@@ -231,7 +230,7 @@ if __name__ == "__main__":
         with col2:
             if summarize_button and url_input:
                 try:
-                    transcript = fetch_youtube_transcript(url_input)
+                    transcript = YouTubeTranscriptManager.fetch_youtube_transcript(url_input)
                     cb = OpenAICallbackHandler()
                     llm = ChatOpenAI(
                         api_key=st.session_state.openai_api_key,
@@ -242,17 +241,18 @@ if __name__ == "__main__":
                         max_tokens=2048,
                     )
                     with st.spinner("Summarizing video... Hang on..."):
-                        resp = get_transcript_summary(transcript, llm, custom_prompt=custom_prompt) if custom_prompt else get_transcript_summary(transcript, llm)
+                        transcript_processor = TranscriptProcessor(llm)
+                        resp = transcript_processor.get_transcript_summary(transcript, custom_prompt=custom_prompt) if custom_prompt else transcript_processor.get_transcript_summary(transcript)
                     st.markdown(resp)
                     st.caption(f"The estimated cost for the request is: {cb.total_cost:.4f}$")
                     if st.session_state.save_responses:
-                        save_response_as_file(
+                        FileManager.save_response_as_file(
                             dir_name=f"./responses/{vid_metadata['channel']}",
                             filename=f"{vid_metadata['name']}",
                             file_content=resp,
                             content_type="markdown",
                         )
-                except (InvalidUrlException, NoTranscriptReceivedException, TranscriptTooLongForModelException) as e:
+                except (InvalidUrlException, NoTranscriptReceivedException, TranscriptException) as e:
                     st.error(e.message)
                     e.log_error()
                 except Exception as e:
