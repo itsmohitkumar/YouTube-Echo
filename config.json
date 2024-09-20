@@ -1,9 +1,7 @@
 {
     "app_title": "AI YouTube Video Summarizer",
     "github_repo_links": {
-        "main": "https://github.com/sudoleg/ytai",
-        "summary": "https://github.com/sudoleg/ytai/blob/main/pages/summary.py",
-        "chat": "https://github.com/sudoleg/ytai/blob/main/pages/chat.py"
+        "main": "https://github.com/itsmohitkumar/YouTube-Echo"
     },
     "default_model": {
         "embeddings": "text-embedding-3-small",
