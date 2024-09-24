@@ -4,6 +4,8 @@
 
 YouTube Echo is a powerful and user-friendly FastAPI application that provides quick and accurate summaries of YouTube videos. This innovative tool leverages OpenAI's language models to analyze video transcripts and generate concise summaries based on user-defined prompts. Designed for efficiency, YouTube Echo aims to save users time and enhance their content consumption experience.
 
+![YouTube Echo Demo](image/demo.png)
+
 ## Table of Contents
 
 - [Key Features](#key-features)
