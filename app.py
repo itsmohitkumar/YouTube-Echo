@@ -2,9 +2,10 @@ from flask import Flask, render_template, request, jsonify
 import logging
 import os
 import json
-from typing import Any
 import openai
 from dotenv import load_dotenv
+from langsmith.wrappers import wrap_openai
+from langsmith import traceable
 from langchain_community.callbacks.openai_info import OpenAICallbackHandler
 from langchain_openai import ChatOpenAI
 from src.app.helpers import (
@@ -23,6 +24,9 @@ load_dotenv()
 # Load configuration from config.json
 with open('config.json') as config_file:
     config = json.load(config_file)
+
+# Wrap OpenAI client with LangSmith tracing
+client = wrap_openai(openai)
 
 app = Flask(__name__)
 
@@ -60,6 +64,7 @@ class YoutubeEcho:
             logging.error("Unexpected error: %s", str(e))
         return False
 
+    @traceable  # Auto-trace this method
     def summarize_video(self, video_url, custom_prompt=None, temperature=None, top_p=None, model=None):
         if temperature is None:
             temperature = config.get("temperature", 1.0)  # Use config value or default to 1.0
@@ -94,6 +99,7 @@ class YoutubeEcho:
             logging.error("Unexpected error: %s", str(e), exc_info=True)
             return None, GENERAL_ERROR_MESSAGE
 
+    @traceable  # Auto-trace this method
     def ask_followup_question(self, followup_question: str):
         """Process the follow-up question using stored summary and JSON data."""
         try:
