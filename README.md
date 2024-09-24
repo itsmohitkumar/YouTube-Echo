@@ -1,3 +1,5 @@
+---
+
 # YouTube Echo
 
 YouTube Echo is a powerful and user-friendly FastAPI application that provides quick and accurate summaries of YouTube videos. This innovative tool leverages OpenAI's language models to analyze video transcripts and generate concise summaries based on user-defined prompts. Designed for efficiency, YouTube Echo aims to save users time and enhance their content consumption experience.
@@ -12,6 +14,8 @@ YouTube Echo is a powerful and user-friendly FastAPI application that provides q
   - [API Endpoint](#api-endpoint)
   - [Request Example](#request-example)
   - [Response Structure](#response-structure)
+- [Streamlit Interface](#streamlit-interface)
+  - [Running the Streamlit App](#running-the-streamlit-app)
 - [Benefits of Using YouTube Echo](#benefits-of-using-youtube-echo)
 - [Running Tests](#running-tests)
 - [Contributing](#contributing)
@@ -28,7 +32,7 @@ YouTube Echo is a powerful and user-friendly FastAPI application that provides q
 
 - **Robust Error Handling**: The API gracefully handles errors, providing meaningful feedback for invalid requests, such as incorrect URLs or missing parameters.
 
-- **Easy Integration**: Built with FastAPI, this application can be easily integrated into existing projects or used as a standalone service.
+- **Streamlit Interface**: A user-friendly web interface to interact with the summarization functionality, allowing for easy input of video URLs and display of results.
 
 ## Installation
 
@@ -71,7 +75,7 @@ Follow these steps to set up the YouTube Echo application on your local machine:
 
 ## Usage
 
-To start the application, use the command below. This will launch a development server:
+To start the FastAPI application, use the command below. This will launch a development server:
 ```bash
 uvicorn app:app --reload
 ```
@@ -119,6 +123,24 @@ To summarize a YouTube video, send a POST request with the following JSON body:
         "detail": "Field 'video_url' is required."
     }
     ```
+
+## Streamlit Interface
+
+The Streamlit interface provides a convenient way to interact with the YouTube Echo application.
+
+### Running the Streamlit App
+
+To run the Streamlit application, use the following command:
+```bash
+streamlit run streamlit.py
+```
+Once the server is running, you can access the Streamlit app at `http://localhost:8501`.
+
+### Features of the Streamlit App
+
+- **User-Friendly Input**: Enter YouTube video URLs and optional custom prompts.
+- **Live Summarization**: Click a button to generate summaries, with real-time feedback.
+- **Model Configuration**: Adjust settings like temperature and top_p for customized summarization.
 
 ## Benefits of Using YouTube Echo
 
