@@ -6,15 +6,15 @@ import streamlit as st
 from dotenv import load_dotenv
 from langchain_community.callbacks.openai_info import OpenAICallbackHandler
 from langchain_openai import ChatOpenAI
-from src.app.helpers import (
+from app.helpers import (
     TranscriptException,
     TranscriptProcessor,
 )
-from src.app.helpers import (
+from app.helpers import (
     ConfigManager,
     FileManager,
 )
-from src.app.youtube import (
+from app.youtube import (
     InvalidUrlException,
     NoTranscriptReceivedException,
     YouTubeTranscriptManager,

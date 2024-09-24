@@ -134,7 +134,7 @@ The Streamlit interface provides a convenient way to interact with the YouTube E
 
 To run the Streamlit application, use the following command:
 ```bash
-streamlit run streamlit.py
+streamlit run src/streamlit.py
 ```
 Once the server is running, you can access the Streamlit app at `http://localhost:8501`.
 
