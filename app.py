@@ -1,37 +1,44 @@
+from flask import Flask, render_template, request, jsonify
 import logging
 import os
-from typing import List, Literal, Optional
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+import json
+from typing import Any
 import openai
 from dotenv import load_dotenv
 from langchain_community.callbacks.openai_info import OpenAICallbackHandler
 from langchain_openai import ChatOpenAI
-from src.helpers import (
+from src.app.helpers import (
     TranscriptException,
     TranscriptProcessor,
-    ConfigManager,
-    FileManager,
 )
-from src.youtube import (
+from src.app.youtube import (
     InvalidUrlException,
     NoTranscriptReceivedException,
     YouTubeTranscriptManager,
 )
 
-# Load environment variables from a .env file
+# Load environment variables
 load_dotenv()
 
-# FastAPI app initialization
-app = FastAPI()
+# Load configuration from config.json
+with open('config.json') as config_file:
+    config = json.load(config_file)
 
-# General error message for unexpected errors
+app = Flask(__name__)
+
 GENERAL_ERROR_MESSAGE = "An unexpected error occurred. Please check the logs for more details."
 
 class YoutubeEcho:
-    def __init__(self):
-        self.setup_logging()
-    
+    instance = None  # Class variable for singleton instance
+
+    def __new__(cls):
+        if cls.instance is None:
+            cls.instance = super(YoutubeEcho, cls).__new__(cls)
+            cls.instance.setup_logging()
+            cls.instance.summary = None
+            cls.instance.json_data = None  # Variable to store JSON data
+        return cls.instance
+
     def setup_logging(self):
         """Configure logging settings."""
         logging.basicConfig(
@@ -39,95 +46,135 @@ class YoutubeEcho:
             datefmt="%d-%b-%y %H:%M:%S",
             level=logging.INFO
         )
-    
-    def get_available_models(self, model_type: Literal["gpts", "embeddings"], api_key: str = "") -> List[str]:
-        """
-        Retrieve a filtered list of available model IDs from OpenAI's API or environment variables,
-        based on the specified model type.
-        """
-        openai.api_key = api_key
-        selectable_model_ids = list(ConfigManager.get_default_config_value(f"available_models.{model_type}"))
-
-        available_model_ids = os.getenv("AVAILABLE_MODEL_IDS")
-        if available_model_ids:
-            return list(filter(lambda m: m in available_model_ids.split(","), selectable_model_ids))
-
-        try:
-            available_model_ids = [model.id for model in openai.models.list()]
-            os.environ["AVAILABLE_MODEL_IDS"] = ",".join(available_model_ids)
-            return list(filter(lambda m: m in available_model_ids, selectable_model_ids))
-        except openai.AuthenticationError as e:
-            logging.error("An authentication error occurred: %s", str(e))
-        except Exception as e:
-            logging.error("An unexpected error occurred: %s", str(e))
-
-        return []
 
     def is_api_key_valid(self, api_key: str) -> bool:
-        """Checks the validity of an OpenAI API key."""
+        """Check the validity of an OpenAI API key."""
         openai.api_key = api_key
         try:
-            openai.models.list()  # Attempt to list models to validate the API key
+            openai.models.list()
             logging.info("API key validation successful")
             return True
         except openai.AuthenticationError as e:
-            logging.error("An authentication error occurred: %s", str(e))
+            logging.error("Authentication error: %s", str(e))
         except Exception as e:
-            logging.error("An unexpected error occurred: %s", str(e))
-
+            logging.error("Unexpected error: %s", str(e))
         return False
 
-    class SummarizeRequest(BaseModel):
-        video_url: str
-        custom_prompt: Optional[str] = None
-        temperature: Optional[float] = 0.7
-        top_p: Optional[float] = 0.9
-        model: Optional[str] = "gpt-3.5-turbo"
-
-    class SummarizeResponse(BaseModel):
-        summary: str
-        estimated_cost: float
-
-    @app.post("/summarize", response_model=SummarizeResponse)
-    async def summarize_video(request: SummarizeRequest):
-        instance = YoutubeEcho()  # Create an instance of the YoutubeEcho class
-        if not instance.is_api_key_valid(os.getenv("OPENAI_API_KEY")):
-            raise HTTPException(status_code=400, detail="Invalid API Key")
+    def summarize_video(self, video_url, custom_prompt=None, temperature=None, top_p=None, model=None):
+        if temperature is None:
+            temperature = config.get("temperature", 1.0)  # Use config value or default to 1.0
+        if top_p is None:
+            top_p = config.get("top_p", 1.0)  # Use config value or default to 1.0
+        if model is None:
+            model = config["default_model"]["gpt"]  # Use default model from config
 
         try:
-            vid_metadata = YouTubeTranscriptManager.get_video_metadata(request.video_url)
-            transcript = YouTubeTranscriptManager.fetch_youtube_transcript(request.video_url)
+            vid_metadata = YouTubeTranscriptManager.get_video_metadata(video_url)
+            transcript = YouTubeTranscriptManager.fetch_youtube_transcript(video_url)
 
+            self.json_data = vid_metadata  # Store JSON data
             cb = OpenAICallbackHandler()
             llm = ChatOpenAI(
                 api_key=os.getenv("OPENAI_API_KEY"),
-                temperature=request.temperature,
-                model=request.model,
-                top_p=request.top_p,
+                temperature=temperature,
+                model=model,
+                top_p=top_p,
                 callbacks=[cb],
                 max_tokens=2048,
             )
 
             transcript_processor = TranscriptProcessor(llm)
-            resp = transcript_processor.get_transcript_summary(
-                transcript,
-                custom_prompt=request.custom_prompt
-            )
-
-            return YoutubeEcho.SummarizeResponse(
-                summary=resp,
-                estimated_cost=cb.total_cost,
-            )
+            self.summary = transcript_processor.get_transcript_summary(transcript, custom_prompt=custom_prompt)
+            return self.summary, cb.total_cost  # Return summary and cost
 
         except (InvalidUrlException, NoTranscriptReceivedException, TranscriptException) as e:
-            logging.error("An error occurred: %s", str(e))
-            raise HTTPException(status_code=400, detail=str(e))
+            logging.error("Error: %s", str(e))
+            return None, str(e)
         except Exception as e:
-            logging.error("An unexpected error occurred: %s", str(e), exc_info=True)
-            raise HTTPException(status_code=500, detail=GENERAL_ERROR_MESSAGE)
-    
-# Run the application using Uvicorn
-if __name__ == "__main__":
-    app_instance = YoutubeEcho()
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+            logging.error("Unexpected error: %s", str(e), exc_info=True)
+            return None, GENERAL_ERROR_MESSAGE
+
+    def ask_followup_question(self, followup_question: str):
+        """Process the follow-up question using stored summary and JSON data."""
+        try:
+            cb = OpenAICallbackHandler()
+            llm = ChatOpenAI(
+                api_key=os.getenv("OPENAI_API_KEY"),
+                temperature=config.get("temperature", 1.0),
+                model=config["default_model"]["gpt"],
+                callbacks=[cb],
+                max_tokens=2048,
+            )
+
+            # Use both summary and JSON data for context
+            full_prompt = (
+                f"Based on the following summary of a video:\n\n"
+                f"{self.summary}\n\n"
+                f"Here is some relevant information from the video:\n\n"
+                f"{self.json_data}\n\n"
+                f"Please answer this follow-up question: {followup_question}"
+            )
+            
+            logging.info("Asking follow-up question with prompt: %s", full_prompt)
+
+            # Use the `invoke` method instead of `__call__`
+            response = llm.invoke(full_prompt)
+
+            # Convert the response to a string
+            response_text = getattr(response, 'content', str(response))
+
+            return response_text, cb.total_cost
+
+        except Exception as e:
+            logging.error("Error processing follow-up question: %s", str(e))
+            return None, "Error processing the question."
+
+@app.route('/')
+def index():
+    """Render the homepage with a form for video URL and prompt."""
+    app_title = config["app_title"]
+    available_gpt_models = config["available_models"]["gpts"]
+    available_embeddings = config["available_models"]["embeddings"]
+    return render_template(
+        'index.html',
+        app_title=app_title,
+        available_gpt_models=available_gpt_models,
+        available_embeddings=available_embeddings,
+        config_data=config  # Pass the entire config data as config_data
+    )
+
+@app.route('/summarize', methods=['POST'])
+def summarize():
+    """Handle the summarization form submission."""
+    video_url = request.form.get('video_url')
+    custom_prompt = request.form.get('custom_prompt')
+    temperature = float(request.form.get('temperature', config.get("temperature", 1.0)))
+    top_p = float(request.form.get('top_p', config.get("top_p", 1.0)))
+    model = request.form.get('model', config["default_model"]["gpt"])
+
+    youtube_echo = YoutubeEcho()
+    if not youtube_echo.is_api_key_valid(os.getenv("OPENAI_API_KEY")):
+        return jsonify({'error': 'Invalid API Key'})
+
+    summary, cost = youtube_echo.summarize_video(video_url, custom_prompt, temperature, top_p, model)
+
+    if summary:
+        return jsonify({'summary': summary, 'cost': cost})  # Return summary and cost
+    else:
+        return jsonify({'error': cost})
+
+@app.route('/ask_followup', methods=['POST'])
+def ask_followup():
+    """Handle follow-up question submissions."""
+    followup_question = request.form.get('followup_question')
+
+    youtube_echo = YoutubeEcho()
+    response, cost = youtube_echo.ask_followup_question(followup_question)
+
+    if response:
+        return jsonify({'response': response, 'cost': cost})
+    else:
+        return jsonify({'error': cost})
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)

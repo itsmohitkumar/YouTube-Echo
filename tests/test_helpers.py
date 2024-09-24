@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, mock_open
-from src.helpers import ConfigManager, FileManager, YouTubeUtils
+from src.app.helpers import ConfigManager, FileManager, YouTubeUtils
 
 class TestConfigManager(unittest.TestCase):
 

@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
 from langchain_core.documents import Document
-from src.chat import TranscriptProcessor
+from src.app.chat import TranscriptProcessor
 
 class TestTranscriptProcessor(unittest.TestCase):
 

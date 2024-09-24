@@ -3,7 +3,7 @@ import os
 import logging
 from pytubefix import YouTube
 from typing import Optional
-from src.youtube import YouTubeTranscriptManager
+from src.app.youtube import YouTubeTranscriptManager
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)

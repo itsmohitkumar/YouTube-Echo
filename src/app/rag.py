@@ -9,7 +9,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from src.helpers import TokenCounter
+from src.app.helpers import TokenCounter
 
 # Constants
 CHUNK_SIZE_FOR_UNPROCESSED_TRANSCRIPT = 512

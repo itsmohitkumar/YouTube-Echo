@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_title }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212; /* Dark background for better eye comfort */
+            color: #f0f0f0; /* Light text for contrast */
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1e1e1e; /* Slightly lighter background for the container */
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            text-align: center;
+            color: #ffffff; /* White text for headings */
+        }
+        h2 {
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-bottom: 5px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+        .info-icon {
+            margin-left: 5px;
+            cursor: pointer;
+            color: #ffffff; /* White color for icons */
+        }
+        .tooltip {
+            display: none;
+            position: absolute;
+            background-color: #333;
+            color: #fff;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 100;
+            white-space: nowrap; /* Prevent text wrapping */
+        }
+        .info-container {
+            position: relative;
+            display: inline-block;
+        }
+        input[type="url"],
+        input[type="text"],
+        input[type="number"],
+        select {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #555; /* Darker border for inputs */
+            border-radius: 4px;
+            background-color: #2a2a2a; /* Darker input background */
+            color: #ffffff; /* Light text in inputs */
+        }
+        button {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result, .follow-up-section {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #333; /* Dark background for results */
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto; /* Enable vertical scrolling */
+        }
+        pre {
+            white-space: pre-wrap; /* Allow text to wrap */
+            word-wrap: break-word; /* Break long words */
+            margin: 0; /* Remove default margins */
+            color: #f0f0f0; /* Light text for preformatted text */
+        }
+        .loading {
+            display: none; /* Hide loading by default */
+            text-align: center; /* Center align */
+            margin-top: 10px; /* Space above loading spinner */
+        }
+        .spinner {
+            border: 5px solid #f3f3f3; /* Light background */
+            border-top: 5px solid #3498db; /* Blue top */
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite; /* Spin animation */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Align summary and follow-up section to the left */
+        .result h2,
+        .follow-up-section h2 {
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <i class="fab fa-youtube" style="color: red; margin-right: 8px;"></i>
+            {{ app_title }}
+        </h1>
+        <form id="summarize-form">
+            <label for="video_url">YouTube Video URL:
+                <span class="info-container">
+                    <i class="fas fa-info-circle info-icon" 
+                       onmouseover="showTooltip(event, 'Enter the full URL of the YouTube video you want to summarize. Example: https://www.youtube.com/watch?v=A8t2NOERe5U')" 
+                       onmouseout="hideTooltip()"></i>
+                    <div class="tooltip" id="tooltip"></div>
+                </span>
+            </label>
+            <input type="url" id="video_url" name="video_url" required>
+
+            <label for="custom_prompt">Custom Prompt:
+                <span class="info-container">
+                    <i class="fas fa-info-circle info-icon" 
+                       onmouseover="showTooltip(event, 'Provide any specific prompt you want the model to follow for summarization.')" 
+                       onmouseout="hideTooltip()"></i>
+                    <div class="tooltip" id="tooltip"></div>
+                </span>
+            </label>
+            <input type="text" id="custom_prompt" name="custom_prompt">
+
+            <label for="temperature">Temperature:
+                <span class="info-container">
+                    <i class="fas fa-info-circle info-icon" 
+                       onmouseover="showTooltip(event, 'Set the creativity level of the response (0 to 2). Higher values make outputs more random. Default is 1.0.')" 
+                       onmouseout="hideTooltip()"></i>
+                    <div class="tooltip" id="tooltip"></div>
+                </span>
+            </label>
+            <input type="number" id="temperature" name="temperature" step="0.1" min="0" max="2" value="1.0">
+
+            <label for="top_p">Top P:
+                <span class="info-container">
+                    <i class="fas fa-info-circle info-icon" 
+                       onmouseover="showTooltip(event, 'Control the diversity of the output (0 to 1). Default is 1.0 which considers all options.')" 
+                       onmouseout="hideTooltip()"></i>
+                    <div class="tooltip" id="tooltip"></div>
+                </span>
+            </label>
+            <input type="number" id="top_p" name="top_p" step="0.1" min="0" max="1" value="1.0">
+
+            <label for="embedding_model">Select Embedding Model:
+                <span class="info-container">
+                    <i class="fas fa-info-circle info-icon" 
+                       onmouseover="showTooltip(event, 'Choose an embedding model for processing the video. Example: text-embedding-3-small')" 
+                       onmouseout="hideTooltip()"></i>
+                    <div class="tooltip" id="tooltip"></div>
+                </span>
+            </label>
+            <select name="embedding_model" id="embedding_model">
+                {% for embedding in config_data["available_models"]["embeddings"] %}
+                    <option value="{{ embedding }}">{{ embedding }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="model">Select GPT Model:
+                <span class="info-container">
+                    <i class="fas fa-info-circle info-icon" 
+                       onmouseover="showTooltip(event, 'Select the GPT model to use for summarization.')" 
+                       onmouseout="hideTooltip()"></i>
+                    <div class="tooltip" id="tooltip"></div>
+                </span>
+            </label>
+            <select name="model" id="model">
+                {% for model in config_data["available_models"]["gpts"] %}
+                    <option value="{{ model }}">{{ model }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="submit">Summarize Video</button>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+            </div>
+        </form>
+
+        <div class="result" id="result-section" style="display: none;">
+            <h2>Summary</h2>
+            <pre id="summary"></pre>
+            <h5>Cost$: <span id="cost"></span></h5> <!-- Added cost display -->
+        </div>
+
+        <div class="follow-up-section" style="display: none;">
+            <h2>Ask a Follow-Up Question</h2>
+            <form id="follow-up-form">
+                <input type="text" id="followup_question" name="followup_question" placeholder="Type your question here" required>
+                <button type="submit">Ask</button>
+            </form>
+            <div class="result" id="followup-result" style="display: none;">
+                <h2>Follow-Up Answer</h2>
+                <pre id="followup-response"></pre>
+                <h5>Cost$: <span id="followup-cost"></span></h5> <!-- Added follow-up cost display -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showTooltip(event, text) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerText = text;
+            tooltip.style.display = 'block';
+            tooltip.style.left = (event.pageX + 5) + 'px'; // Positioning right next to the icon
+            tooltip.style.top = (event.pageY - 25) + 'px'; // Positioning above the icon
+        }
+
+        function hideTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.style.display = 'none';
+        }
+
+        document.getElementById('summarize-form').onsubmit = async function(event) {
+            event.preventDefault();
+            document.getElementById('loading').style.display = 'block'; // Show loading spinner
+            const formData = new FormData(this);
+            const response = await fetch('/summarize', {
+                method: 'POST',
+                body: formData,
+            });
+            const result = await response.json();
+            document.getElementById('loading').style.display = 'none'; // Hide loading spinner
+
+            if (result.summary) {
+                document.getElementById('summary').innerText = result.summary;
+
+                // Round the cost to 5 decimal places and display
+                document.getElementById('cost').innerText = parseFloat(result.cost).toFixed(5); // Round to 5 decimal places
+                document.getElementById('result-section').style.display = 'block';
+                document.querySelector('.follow-up-section').style.display = 'block'; // Show follow-up section
+            } else {
+                alert('Error: ' + result.error);
+            }            
+        };
+
+        document.getElementById('follow-up-form').onsubmit = async function(event) {
+            event.preventDefault();
+            const followupQuestion = document.getElementById('followup_question').value;
+            const response = await fetch('/ask_followup', {
+                method: 'POST',
+                body: new URLSearchParams({ followup_question: followupQuestion }),
+            });
+            const result = await response.json();
+
+            if (result.response) {
+                document.getElementById('followup-response').innerText = result.response;
+
+                // Round the follow-up cost to 5 decimal places and display
+                document.getElementById('followup-cost').innerText = parseFloat(result.cost).toFixed(5); // Round to 5 decimal places
+                document.getElementById('followup-result').style.display = 'block';
+            } else {
+                alert('Error: ' + result.error);
+            }            
+        };
+    </script>
+</body>
+</html>

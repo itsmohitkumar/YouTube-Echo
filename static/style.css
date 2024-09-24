@@ -1,0 +1,112 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #121212; /* Dark background for less strain on the eyes */
+    color: #e0e0e0; /* Light text color for contrast */
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 600px;
+    margin: 50px auto;
+    padding: 20px;
+    background: #1e1e1e; /* Slightly lighter dark for the container */
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+h1, h2 {
+    text-align: center;
+    color: #ffffff; /* White for headings */
+    margin-bottom: 20px;
+}
+
+h1 {
+    font-size: 2.5em;
+    font-weight: 600;
+}
+
+h2 {
+    font-size: 1.5em;
+    font-weight: 500;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Space between form elements */
+}
+
+label {
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #e0e0e0; /* Light color for labels */
+}
+
+input[type="url"],
+input[type="text"],
+input[type="number"],
+select {
+    padding: 12px;
+    border: 2px solid #3498db; /* Blue border */
+    border-radius: 6px;
+    background: #2c2c2c; /* Darker input background */
+    color: #ffffff; /* White text color */
+    transition: border-color 0.3s ease;
+}
+
+input[type="url"]:focus,
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+    border-color: #2980b9; /* Darker blue on focus */
+    outline: none; /* Remove default outline */
+}
+
+button {
+    padding: 12px;
+    background-color: #3498db; /* Blue button */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+    background-color: #2980b9; /* Darker blue on hover */
+    transform: translateY(-2px); /* Slight lift effect */
+}
+
+.result, .follow-up-section {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #2c2c2c; /* Darker background for results */
+    border-radius: 6px;
+    border-left: 5px solid #3498db; /* Stylish border */
+    max-height: 200px; /* Set a maximum height */
+    overflow-y: auto; /* Enable vertical scrolling if content exceeds max height */
+}
+
+pre {
+    white-space: pre-wrap; /* Allow text to wrap */
+    word-wrap: break-word; /* Break long words */
+    margin: 0; /* Remove default margins */
+    color: #e0e0e0; /* Light text for preformatted text */
+}
+
+.response {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #d4edda; /* Light green background */
+    border: 1px solid #c3e6cb; /* Green border */
+    border-radius: 6px;
+    max-height: 100px; /* Set a maximum height for follow-up response */
+    overflow-y: auto; /* Enable vertical scrolling if content exceeds max height */
+    transition: background-color 0.3s ease;
+}
+
+.response:hover {
+    background-color: #c3e6cb; /* Darker green on hover */
+}
