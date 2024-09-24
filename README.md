@@ -79,7 +79,7 @@ Follow these steps to set up the YouTube Echo application on your local machine:
 
 To start the FastAPI application, use the command below. This will launch a development server:
 ```bash
-uvicorn app:app --reload
+uvicorn src.fastapi:app --reload
 ```
 Once the server is running, you can access the API at `http://127.0.0.1:8000`.
 
