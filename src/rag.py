@@ -9,7 +9,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from src.helpers import num_tokens_from_string
+from src.helpers import TokenCounter
 
 # Constants
 CHUNK_SIZE_FOR_UNPROCESSED_TRANSCRIPT = 512
@@ -56,7 +56,7 @@ class TranscriptProcessor:
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=chunk_size,
                 chunk_overlap=chunk_overlap,
-                length_function=len if len_func == "characters" else num_tokens_from_string,
+                length_function=len if len_func == "characters" else TokenCounter.num_tokens_from_string,
             )
             splits = text_splitter.create_documents([transcript_text])
             logging.info(
