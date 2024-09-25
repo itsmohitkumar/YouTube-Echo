@@ -58,6 +58,7 @@ jobs:
   build-and-publish:
     needs: test  # Ensure tests pass before publishing
     runs-on: ubuntu-latest
+    environment: YouTube-Echo  # Specify the environment here
 
     steps:
       # Step 1: Checkout code
@@ -86,4 +87,4 @@ jobs:
 
       # Step 5: Output Docker image digest
       - name: Image digest
-        run: echo ${{ steps.build-and-publish.outputs.digest }}
+        run: echo "Docker image digest: ${{ steps.build-and-publish.outputs.digest }}"
