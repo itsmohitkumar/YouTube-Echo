@@ -78,6 +78,7 @@ jobs:
 
       # Step 4: Build and push Docker image
       - name: Build and push Docker image
+        id: build-and-publish  # Add an ID for this step to reference later
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -86,5 +87,5 @@ jobs:
           tags: ${{ secrets.DOCKER_USERNAME }}/YouTube-Echo:latest
 
       # Step 5: Output Docker image digest
-      - name: Image digest
+      - name: Output Docker image digest
         run: echo "Docker image digest: ${{ steps.build-and-publish.outputs.digest }}"
