@@ -14,12 +14,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # Step 2: Check Docker Hub secrets (Debugging Step)
-    - name: Check DockerHub Username
+    # Step 2: Verify Secrets
+    - name: Verify Secrets
       run: |
-        echo "DockerHub Username: ${{ secrets.DOCKERHUB_USERNAME }}"
-        # Warning: Don't log the token or sensitive data
-        echo "Checking if Docker Hub username is available..."
+        if [[ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]]; then
+          echo "DOCKERHUB_USERNAME is not set"
+        else
+          echo "DOCKERHUB_USERNAME is set"
+        fi
+
+        if [[ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]]; then
+          echo "DOCKERHUB_TOKEN is not set"
+        else
+          echo "DOCKERHUB_TOKEN is set"
+        fi
 
     # Step 3: Log in to Docker Hub using Personal Access Token
     - name: Login to Docker Hub
