@@ -1,40 +1,100 @@
-import os
-from fastapi.testclient import TestClient
 import pytest
-from dotenv import load_dotenv
-from app import app  # Import your FastAPI app
+import os
+from flask import json
+from app import app, YoutubeEcho
 
-# Load environment variables from the .env file
-load_dotenv()
+# Set the testing environment
+os.environ['FLASK_ENV'] = 'testing'
 
-# Fixture for setting up the TestClient
 @pytest.fixture
 def client():
-    """Create a TestClient for testing the FastAPI app."""
-    return TestClient(app)
+    """A test client for the app."""
+    app.config['TESTING'] = True
+    with app.test_client() as client:
+        yield client
 
-def test_summarize_video(client):
-    """Test summarizing a video with a valid URL and API key."""
+def test_index(client):
+    """Test the index route returns a 200 status code."""
+    response = client.get('/')
+    assert response.status_code == 200
+    # Check if some known content is rendered in the HTML, such as the title or a heading
+    assert b"<title>" in response.data  # Replace with a known static part of the HTML
 
-    # Ensure the API Key is set in the environment from .env
-    api_key = os.getenv("OPENAI_API_KEY")
-    assert api_key is not None, "API key not found. Please set it in the .env file."
+def test_summarize_valid_request(client, mocker):
+    """Test the /summarize route with valid input."""
+    mocker.patch.object(YoutubeEcho, 'is_api_key_valid', return_value=True)
+    mocker.patch.object(YoutubeEcho, 'summarize_video', return_value=("This is a summary.", 0.05))
 
-    # Define the payload for the POST request
-    payload = {
-        "video_url": "https://www.youtube.com/watch?v=A8t2NOERe5U",  # Replace with your video URL
-        "custom_prompt": "Please summarize this video.",
-        "temperature": 0.7,
-        "top_p": 0.9,
-        "model": "gpt-3.5-turbo"
+    # Create test data
+    data = {
+        'video_url': 'https://www.youtube.com/watch?v=sample_valid_video',
+        'custom_prompt': 'Summarize this video.',
+        'temperature': 0.7,
+        'top_p': 0.9,
+        'model': 'gpt-3.5-turbo'
     }
 
-    # Send a POST request to the /summarize endpoint
-    response = client.post("/summarize", json=payload)
+    # Send POST request to /summarize
+    response = client.post('/summarize', data=data)
 
-    # Log the response content for debugging (optional)
-    # You can comment this out if you don't need the output during normal runs
-    print(response.json())  
+    # Load the JSON response data
+    response_json = json.loads(response.data)
 
-    # Check that the response status code is 200 (OK)
-    assert response.status_code == 200, f"Expected 200 OK, got {response.status_code}. Response: {response.json()}"
+    assert response.status_code == 200
+    assert 'summary' in response_json
+    assert response_json['summary'] == "This is a summary."
+    assert response_json['cost'] == 0.05
+
+def test_summarize_invalid_api_key(client, mocker):
+    """Test the /summarize route with an invalid API key."""
+    mocker.patch.object(YoutubeEcho, 'is_api_key_valid', return_value=False)
+
+    data = {
+        'video_url': 'https://www.youtube.com/watch?v=sample_valid_video',
+        'custom_prompt': 'Summarize this video.',
+        'temperature': 0.7,
+        'top_p': 0.9,
+        'model': 'gpt-3.5-turbo'
+    }
+
+    response = client.post('/summarize', data=data)
+    response_json = json.loads(response.data)
+
+    assert response.status_code == 200
+    assert 'error' in response_json
+    assert response_json['error'] == 'Invalid API Key'
+
+def test_ask_followup_valid_request(client, mocker):
+    """Test the /ask_followup route with valid input."""
+    mocker.patch.object(YoutubeEcho, 'ask_followup_question', return_value=("This is the follow-up response.", 0.02))
+
+    # Create test data
+    data = {
+        'followup_question': 'What is the main point of the video?'
+    }
+
+    # Send POST request to /ask_followup
+    response = client.post('/ask_followup', data=data)
+
+    # Load the JSON response data
+    response_json = json.loads(response.data)
+
+    assert response.status_code == 200
+    assert 'response' in response_json
+    assert response_json['response'] == "This is the follow-up response."
+    assert response_json['cost'] == 0.02
+
+def test_ask_followup_error(client, mocker):
+    """Test the /ask_followup route when there is an error processing the question."""
+    mocker.patch.object(YoutubeEcho, 'ask_followup_question', return_value=(None, "Error processing the question."))
+
+    data = {
+        'followup_question': 'What is the main point of the video?'
+    }
+
+    response = client.post('/ask_followup', data=data)
+    response_json = json.loads(response.data)
+
+    assert response.status_code == 200
+    assert 'error' in response_json
+    assert response_json['error'] == "Error processing the question."
