@@ -18,7 +18,7 @@ jobs:
 
       # Step 2: Build the Docker Image
       - name: Build Docker Image
-        run: docker build . --file Dockerfile --tag workflow-test:latest  # Use 'latest' for simplicity
+        run: docker build . --file Dockerfile --tag workflow-test:$(date +%s)
 
   test:
     runs-on: ubuntu-latest
@@ -27,13 +27,13 @@ jobs:
     steps:
       # Step 1: Checkout code
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       # Step 2: Set up Python environment
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'  # Match the version here
+          python-version: '3.9.20'
 
       # Step 3: Install dependencies
       - name: Install dependencies
@@ -58,12 +58,11 @@ jobs:
   build-and-publish:
     needs: test  # Ensure tests pass before publishing
     runs-on: ubuntu-latest
-    environment: YouTube-Echo  # Specify the environment here
 
     steps:
       # Step 1: Checkout code
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       # Step 2: Set up Docker Buildx
       - name: Set up Docker Buildx
@@ -78,7 +77,6 @@ jobs:
 
       # Step 4: Build and push Docker image
       - name: Build and push Docker image
-        id: build-and-publish  # Add an ID for this step to reference later
         uses: docker/build-push-action@v4
         with:
           context: .
@@ -87,5 +85,5 @@ jobs:
           tags: ${{ secrets.DOCKER_USERNAME }}/YouTube-Echo:latest
 
       # Step 5: Output Docker image digest
-      - name: Output Docker image digest
-        run: echo "Docker image digest: ${{ steps.build-and-publish.outputs.digest }}"
+      - name: Image digest
+        run: echo ${{ steps.build-and-publish.outputs.digest }}
