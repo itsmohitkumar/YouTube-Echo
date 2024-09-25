@@ -1,5 +1,3 @@
-# Workflow to Build and Deploy a Docker Image
-
 name: Build and Deploy Docker Image
 
 on:
