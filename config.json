@@ -3,6 +3,10 @@
     "github_repo_links": {
         "main": "https://github.com/itsmohitkumar/YouTube-Echo"
     },
+    "langchain": {
+        "project_name": "YouTube-Echo",
+        "endpoint": "https://api.smith.langchain.com"
+    },
     "default_model": {
         "embeddings": "text-embedding-3-small",
         "gpt": "gpt-4o-mini"

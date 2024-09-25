@@ -20,18 +20,17 @@ from src.app.youtube import (
 # Load environment variables
 load_dotenv()
 
-# Set LangChain tracing and API key from environment variables
-PROJECT_NAME = "YouTube-Echo"
-os.environ["LANGCHAIN_PROJECT"] = PROJECT_NAME
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
-
-# Define the project endpoint
-LANGCHAIN_ENDPOINT = "https://api.smith.langchain.com"
-
 # Load configuration from config.json
 with open('config.json') as config_file:
     config = json.load(config_file)
+
+# Set LangChain tracing and API key from the config file
+os.environ["LANGCHAIN_PROJECT"] = config["langchain"]["project_name"]
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
+
+# Define the project endpoint from config
+LANGCHAIN_ENDPOINT = config["langchain"]["endpoint"]
 
 app = Flask(__name__)
 
