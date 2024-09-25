@@ -13,42 +13,62 @@ jobs:
     # Step 1: Checkout the code from the repository
     - name: Checkout code
       uses: actions/checkout@v3
+      run: echo "✔️ Code checked out from repository"
 
     # Step 2: Verify Secrets
     - name: Verify Secrets
       run: |
+        echo "🔍 Verifying secrets..."
         if [[ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]]; then
-          echo "DOCKERHUB_USERNAME is not set"
+          echo "❌ ERROR: DOCKERHUB_USERNAME is not set"
+          exit 1
         else
-          echo "DOCKERHUB_USERNAME is set"
+          echo "✔️ DOCKERHUB_USERNAME is set"
         fi
 
         if [[ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]]; then
-          echo "DOCKERHUB_TOKEN is not set"
+          echo "❌ ERROR: DOCKERHUB_TOKEN is not set"
+          exit 1
         else
-          echo "DOCKERHUB_TOKEN is set"
+          echo "✔️ DOCKERHUB_TOKEN is set"
         fi
 
-    # Step 3: Log in to Docker Hub using Personal Access Token
+    # Step 3: Check Docker version (to ensure Docker is installed)
+    - name: Check Docker version
+      run: |
+        echo "🔍 Checking Docker installation..."
+        docker --version
+        echo "✔️ Docker is installed"
+
+    # Step 4: Log in to Docker Hub using Personal Access Token
     - name: Login to Docker Hub
+      run: |
+        echo "🔐 Logging in to Docker Hub..."
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}  # Your Docker Hub username
         password: ${{ secrets.DOCKERHUB_TOKEN }}     # Your Docker Hub PAT (Token)
+      continue-on-error: false  # Fail if login is unsuccessful
 
-    # Step 4: Build the Docker image
+    # Step 5: Build the Docker image
     - name: Build the Docker image
       run: |
+        echo "🔨 Building Docker image..."
         docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/your-image-name:latest .
+        echo "✔️ Docker image built successfully"
 
-    # Step 5: Push the Docker image to Docker Hub
+    # Step 6: Push the Docker image to Docker Hub
     - name: Push the Docker image
       run: |
+        echo "🚀 Pushing Docker image to Docker Hub..."
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/your-image-name:latest
+        echo "✔️ Docker image pushed successfully"
 
-    # Step 6: (Optional) Run the Docker container (if needed)
+    # Step 7: (Optional) Run the Docker container (if needed)
     - name: Run the Docker container
       run: |
+        echo "▶️ Running Docker container..."
         docker run -d -p 5000:5000 \
           --name your-container-name \
           ${{ secrets.DOCKERHUB_USERNAME }}/your-image-name:latest
+        echo "✔️ Docker container is running on port 5000"
