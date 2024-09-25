@@ -82,7 +82,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/flasktest-app:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/YouTube-Echo:latest
 
       # Step 5: Output Docker image digest
       - name: Image digest
