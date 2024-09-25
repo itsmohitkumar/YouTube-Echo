@@ -9,14 +9,19 @@ homepage = "https://github.com/itsmohitkumar/YouTube-Echo"
 repository = "https://github.com/itsmohitkumar/YouTube-Echo"
 keywords = ["YouTube", "summary", "Flask", "AI"]
 
+packages = [
+    { include = "src" }
+]
+
 [tool.poetry.dependencies]
-python = ">=3.9,<3.9.7 || >3.9.7,<4.0"
+python = "^3.9"
 youtube-transcript-api = "^0.6.2"
 langchain-community = "^0.3.0"
 langchain-openai = "^0.2.0"
 langchain-text-splitters = "^0.3.0"
 streamlit = "^1.38.0"
-watchdog = "^2.1.5"  # Change this line
+watchdog = "^5.0.2"
+pytest = "^8.3.3"
 peewee = "^3.17.6"
 python-dotenv = "^1.0.1"
 chromadb = "^0.5.7"
@@ -25,12 +30,13 @@ randomname = "^0.2.1"
 tiktoken = "^0.7.0"
 openai-whisper = "^20231117"
 pytubefix = "^6.17.0"
+pytest-mock = "^3.14.0"
 flask = "^3.0.3"
 gunicorn = "^20.1.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^8.3.3"
-pytest-mock = "^3.14.0"
+pytest = "^7.2.0"
+pytest-mock = "^3.6.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
