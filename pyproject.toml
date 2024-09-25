@@ -10,29 +10,27 @@ repository = "https://github.com/itsmohitkumar/YouTube-Echo"
 keywords = ["YouTube", "summary", "Flask", "AI"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
-youtube-transcript-api = "^0.4.5"
-langchain-community = "^0.1.0"
-langchain-openai = "^0.1.0"
-langchain-text-splitters = "^0.1.0"
-streamlit = "^1.5.0"
-watchdog = "^2.1.6"
-pytest = "^7.2.0"
-peewee = "^3.14.4"
-python-dotenv = "^0.19.2"
-chromadb = "^0.3.0"
-langchain-chroma = "^0.1.0"
-randomname = "^0.1.1"
-tiktoken = "^0.2.0"
-openai-whisper = "^1.0.0"
-pytubefix = "^0.0.1"
-pytest-mock = "^3.6.0"
-flask = "^2.1.1"
+python = ">=3.9,<3.9.7 || >3.9.7,<4.0"
+youtube-transcript-api = "^0.6.2"
+langchain-community = "^0.3.0"
+langchain-openai = "^0.2.0"
+langchain-text-splitters = "^0.3.0"
+streamlit = "^1.38.0"
+watchdog = "^2.1.5"  # Change this line
+peewee = "^3.17.6"
+python-dotenv = "^1.0.1"
+chromadb = "^0.5.7"
+langchain-chroma = "^0.1.4"
+randomname = "^0.2.1"
+tiktoken = "^0.7.0"
+openai-whisper = "^20231117"
+pytubefix = "^6.17.0"
+flask = "^3.0.3"
 gunicorn = "^20.1.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^7.2.0"
-pytest-mock = "^3.6.0"
+pytest = "^8.3.3"
+pytest-mock = "^3.14.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
