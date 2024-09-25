@@ -27,7 +27,11 @@ with open('config.json') as config_file:
 # Set LangChain tracing and API key from the config file
 os.environ["LANGCHAIN_PROJECT"] = config["langchain"]["project_name"]
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
+langchain_api_key = os.getenv("LANGCHAIN_API_KEY")
+if langchain_api_key is None:
+    raise ValueError("LANGCHAIN_API_KEY is not set in the environment variables.")
+
+os.environ["LANGCHAIN_API_KEY"] = langchain_api_key
 
 # Define the project endpoint from config
 LANGCHAIN_ENDPOINT = config["langchain"]["endpoint"]
@@ -70,21 +74,42 @@ class YoutubeEcho:
 
     @traceable  # Auto-trace this method
     def summarize_video(self, video_url, custom_prompt=None, temperature=None, top_p=None, model=None):
-        if temperature is None:
-            temperature = config.get("temperature", 1.0)  # Use config value or default to 1.0
-        if top_p is None:
-            top_p = config.get("top_p", 1.0)  # Use config value or default to 1.0
-        if model is None:
-            model = config["default_model"]["gpt"]  # Use default model from config
+        # Validate API keys
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        langchain_api_key = os.getenv("LANGCHAIN_API_KEY")
+
+        # Check OpenAI API Key validity
+        if not self.is_api_key_valid(openai_api_key):  # Pass the openai_api_key here
+            logging.error("Invalid or missing OpenAI API Key.")
+            return None, 'Invalid or missing OpenAI API Key'
+
+        # Existing validation for LangChain API key
+        if not langchain_api_key:
+            logging.error("Invalid or missing LangChain API Key.")
+            return None, 'Invalid or missing LangChain API Key'
+
+        # Set default values for temperature, top_p, and model
+        temperature = temperature or config.get("temperature", 1.0)  # Use config value or default to 1.0
+        top_p = top_p or config.get("top_p", 1.0)  # Use config value or default to 1.0
+        model = model or config["default_model"]["gpt"]  # Use default model from config
+
+        # Validate the video_url
+        if not video_url:
+            logging.error("Invalid video URL: %s", video_url)
+            return None, "Invalid video URL."  # Early return for invalid URL
 
         try:
+            # Fetch metadata and transcript for the provided video URL
             vid_metadata = YouTubeTranscriptManager.get_video_metadata(video_url)
             transcript = YouTubeTranscriptManager.fetch_youtube_transcript(video_url)
 
-            self.json_data = vid_metadata  # Store JSON data
+            # Store JSON data for later use
+            self.json_data = vid_metadata
+
+            # Initialize OpenAI callback and language model
             cb = OpenAICallbackHandler()
             llm = ChatOpenAI(
-                api_key=os.getenv("OPENAI_API_KEY"),
+                api_key=openai_api_key,
                 temperature=temperature,
                 model=model,
                 top_p=top_p,
@@ -92,10 +117,14 @@ class YoutubeEcho:
                 max_tokens=2048,
             )
 
+            # Process the transcript to generate a summary
             transcript_processor = TranscriptProcessor(llm)
             self.summary = transcript_processor.get_transcript_summary(transcript, custom_prompt=custom_prompt)
-            return self.summary, cb.total_cost  # Return summary and cost
+            return self.summary, cb.total_cost  # Return the summary and the cost
 
+        except KeyError as e:
+            logging.error("KeyError: %s", str(e))
+            return None, "Error retrieving video metadata: missing required information."
         except (InvalidUrlException, NoTranscriptReceivedException, TranscriptException) as e:
             logging.error("Error: %s", str(e))
             return None, str(e)
@@ -124,7 +153,7 @@ class YoutubeEcho:
                 f"{self.json_data}\n\n"
                 f"Please answer this follow-up question: {followup_question}"
             )
-            
+
             logging.info("Asking follow-up question with prompt: %s", full_prompt)
 
             # Use the `invoke` method instead of `__call__`
@@ -168,16 +197,6 @@ def summarize():
     model = request.form.get('model', config["default_model"]["gpt"])
 
     youtube_echo = YoutubeEcho()
-    
-    # Check if API key is in environment variables
-    api_key = os.getenv("OPENAI_API_KEY")
-
-    if not api_key:
-        # If API key is not found in the environment, return error response
-        return jsonify({'error': 'Invalid or missing OpenAI API Key'})
-
-    # Set the API key in the environment variable for OpenAI
-    openai.api_key = api_key
 
     summary, cost = youtube_echo.summarize_video(video_url, custom_prompt, temperature, top_p, model)
 
@@ -200,4 +219,4 @@ def ask_followup():
         return jsonify({'error': cost})
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=5000)  # Set debug to False for production

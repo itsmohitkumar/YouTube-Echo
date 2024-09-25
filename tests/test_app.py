@@ -3,13 +3,23 @@ import os
 from flask import json
 from app import app, YoutubeEcho
 
-# Set the testing environment
+# Set the testing environment and mock API keys
 os.environ['FLASK_ENV'] = 'testing'
+os.environ['LANGCHAIN_API_KEY'] = 'test_langchain_api_key'  # Set mock keys
+os.environ['OPENAI_API_KEY'] = 'test_openai_api_key'
 
 @pytest.fixture
-def client():
+def client(mocker):
     """A test client for the app."""
     app.config['TESTING'] = True
+    
+    # Mock the LANGCHAIN_API_KEY and OPENAI_API_KEY for the tests
+    # (Already set above, this can be removed if not needed)
+    mocker.patch.dict(os.environ, {
+        "LANGCHAIN_API_KEY": "test_langchain_api_key",
+        "OPENAI_API_KEY": "test_openai_api_key"
+    })
+
     with app.test_client() as client:
         yield client
 
@@ -17,16 +27,13 @@ def test_index(client):
     """Test the index route returns a 200 status code."""
     response = client.get('/')
     assert response.status_code == 200
-    # Check if some known content is rendered in the HTML, such as the title or a heading
     assert b"<title>" in response.data  # Replace with a known static part of the HTML
 
 def test_summarize_valid_request(client, mocker):
     """Test the /summarize route with valid input."""
-    # Mock the API key validation method to always return True
     mocker.patch.object(YoutubeEcho, 'is_api_key_valid', return_value=True)
     mocker.patch.object(YoutubeEcho, 'summarize_video', return_value=("This is a summary.", 0.05))
 
-    # Create test data
     data = {
         'video_url': 'https://www.youtube.com/watch?v=sample_valid_video',
         'custom_prompt': 'Summarize this video.',
@@ -35,21 +42,19 @@ def test_summarize_valid_request(client, mocker):
         'model': 'gpt-3.5-turbo'
     }
 
-    # Send POST request to /summarize
-    response = client.post('/summarize', json=data)  # Use json=data if your endpoint expects JSON
-
-    # Load the JSON response data
+    response = client.post('/summarize', json=data)
     response_json = json.loads(response.data)
 
-    # Check if the API key mock works correctly
     assert response.status_code == 200
-    assert 'summary' in response_json, f"Expected summary in response, but got: {response_json}"
+    assert 'summary' in response_json
 
 def test_summarize_invalid_api_key(client, mocker):
     """Test the /summarize route with an invalid API key."""
-    # Mock the API key validation method to simulate invalid API key
-    mocker.patch.object(YoutubeEcho, 'is_api_key_valid', return_value=False)
-
+    mocker.patch.dict(os.environ, {
+        "OPENAI_API_KEY": "invalid_api_key",
+        "LANGCHAIN_API_KEY": "dummy_langchain_api_key"
+    })
+    
     data = {
         'video_url': 'https://www.youtube.com/watch?v=sample_valid_video',
         'custom_prompt': 'Summarize this video.',
@@ -58,28 +63,23 @@ def test_summarize_invalid_api_key(client, mocker):
         'model': 'gpt-3.5-turbo'
     }
 
-    response = client.post('/summarize', json=data)  # Use json=data
-
-    # Load the JSON response data
+    response = client.post('/summarize', json=data)  # Use json instead of data
     response_json = json.loads(response.data)
 
     assert response.status_code == 200
     assert 'error' in response_json
     assert response_json['error'] == 'Invalid or missing OpenAI API Key'
-    
+
 def test_ask_followup_valid_request(client, mocker):
     """Test the /ask_followup route with valid input."""
     mocker.patch.object(YoutubeEcho, 'ask_followup_question', return_value=("This is the follow-up response.", 0.02))
 
-    # Create test data
     data = {
         'followup_question': 'What is the main point of the video?'
     }
 
-    # Send POST request to /ask_followup
     response = client.post('/ask_followup', json=data)
 
-    # Load the JSON response data
     response_json = json.loads(response.data)
 
     assert response.status_code == 200
