@@ -22,6 +22,8 @@ def test_index(client):
 
 def test_summarize_valid_request(client, mocker):
     """Test the /summarize route with valid input."""
+    # Mock the API key validation method to always return True
+    mocker.patch.object(YoutubeEcho, 'is_api_key_valid', return_value=True)
     mocker.patch.object(YoutubeEcho, 'summarize_video', return_value=("This is a summary.", 0.05))
 
     # Create test data
@@ -34,7 +36,7 @@ def test_summarize_valid_request(client, mocker):
     }
 
     # Send POST request to /summarize
-    response = client.post('/summarize', data=data)
+    response = client.post('/summarize', json=data)  # Use json=data if your endpoint expects JSON
 
     # Load the JSON response data
     response_json = json.loads(response.data)
@@ -45,10 +47,9 @@ def test_summarize_valid_request(client, mocker):
     assert response_json['cost'] == 0.05
 
 def test_summarize_invalid_api_key(client, mocker):
-    """Test the /summarize route with an invalid API key (this test is removed)."""
-    # Since we don't want to use openapikey, we can skip this test.
-    # Just for reference: 
-    # mocker.patch.object(YoutubeEcho, 'is_api_key_valid', return_value=False)
+    """Test the /summarize route with an invalid API key."""
+    # Mock the API key validation method to simulate invalid API key
+    mocker.patch.object(YoutubeEcho, 'is_api_key_valid', return_value=False)
 
     data = {
         'video_url': 'https://www.youtube.com/watch?v=sample_valid_video',
@@ -58,13 +59,14 @@ def test_summarize_invalid_api_key(client, mocker):
         'model': 'gpt-3.5-turbo'
     }
 
-    response = client.post('/summarize', data=data)
+    response = client.post('/summarize', json=data)  # Use json=data
+
+    # Load the JSON response data
     response_json = json.loads(response.data)
 
-    # Adjust the expected response since we're not using API key validation anymore.
     assert response.status_code == 200
-    assert 'summary' in response_json
-    assert response_json['summary'] == "This is a summary."  # or whatever behavior you expect
+    assert 'error' in response_json
+    assert response_json['error'] == 'Invalid API Key'
 
 def test_ask_followup_valid_request(client, mocker):
     """Test the /ask_followup route with valid input."""
@@ -76,7 +78,7 @@ def test_ask_followup_valid_request(client, mocker):
     }
 
     # Send POST request to /ask_followup
-    response = client.post('/ask_followup', data=data)
+    response = client.post('/ask_followup', json=data)
 
     # Load the JSON response data
     response_json = json.loads(response.data)
@@ -94,7 +96,7 @@ def test_ask_followup_error(client, mocker):
         'followup_question': 'What is the main point of the video?'
     }
 
-    response = client.post('/ask_followup', data=data)
+    response = client.post('/ask_followup', json=data)
     response_json = json.loads(response.data)
 
     assert response.status_code == 200
