@@ -10,7 +10,7 @@ repository = "https://github.com/itsmohitkumar/YouTube-Echo"
 keywords = ["YouTube", "summary", "Flask", "AI"]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.9.7 || >3.9.7,<4.0"
+python = "3.10.4"
 youtube-transcript-api = "^0.6.2"
 langchain-community = "^0.3.0"
 langchain-openai = "^0.2.0"

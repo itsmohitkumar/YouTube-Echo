@@ -1,5 +1,5 @@
 # Use a base Python image
-FROM python:3.10-slim
+FROM python:3.10.4-slim
 
 # Set environment variables (these should be set during runtime)
 ENV LANGCHAIN_TRACING_V2=true
