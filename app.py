@@ -4,7 +4,6 @@ import os
 import json
 import openai
 from dotenv import load_dotenv
-from langsmith.wrappers import wrap_openai
 from langsmith import traceable
 from langchain_community.callbacks.openai_info import OpenAICallbackHandler
 from langchain_openai import ChatOpenAI
@@ -21,12 +20,18 @@ from src.app.youtube import (
 # Load environment variables
 load_dotenv()
 
+# Set LangChain tracing and API key from environment variables
+PROJECT_NAME = "YouTube-Echo"
+os.environ["LANGCHAIN_PROJECT"] = PROJECT_NAME
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
+
+# Define the project endpoint
+LANGCHAIN_ENDPOINT = "https://api.smith.langchain.com"
+
 # Load configuration from config.json
 with open('config.json') as config_file:
     config = json.load(config_file)
-
-# Wrap OpenAI client with LangSmith tracing
-client = wrap_openai(openai)
 
 app = Flask(__name__)
 
