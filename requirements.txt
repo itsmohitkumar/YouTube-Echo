@@ -16,3 +16,4 @@ openai-whisper
 pytubefix
 pytest-mock
 flask
+gunicorn

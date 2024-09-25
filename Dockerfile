@@ -1,28 +1,30 @@
 # Use a base Python image
-FROM python:3.10
+FROM python:3.10-slim
 
-# Set environment variables
+# Set environment variables (these should be set during runtime)
 ENV LANGCHAIN_TRACING_V2=true
 ENV LANGCHAIN_PROJECT=YouTube-Echo
-ENV LANGCHAIN_API_KEY=LANGCHAIN_API_KEY
 
 # Set working directory
 WORKDIR /app
 
-# Install necessary packages and clean up
-RUN apt-get update && \
-    apt-get install -y git && \
-    rm -rf /var/lib/apt/lists/*
+# Install system dependencies
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Poetry
+RUN pip install poetry
 
-# Copy the rest of the application code
+# Copy pyproject.toml and poetry.lock first (for caching)
+COPY pyproject.toml poetry.lock ./
+
+# Install Python dependencies with Poetry
+RUN poetry install --no-root --no-dev
+
+# Copy the entire project code
 COPY . .
 
-# Expose the port that the app runs on
+# Expose the port the app runs on
 EXPOSE 5000
 
-# Command to run the application
-CMD ["python", "app.py"]
+# Run the app using Gunicorn in production mode via Poetry
+CMD ["poetry", "run", "gunicorn", "-b", "0.0.0.0:5000", "app:app"]

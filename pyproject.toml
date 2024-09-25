@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "YouTube-Echo"
+version = "0.1.0"
+description = "A Flask application for summarizing YouTube videos. YouTube Echo quickly summarizes YouTube videos using AI, helping users save time while grasping essential content without watching entire videos."
+authors = ["Mohit Kumar <mohitpanghal12345@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/itsmohitkumar/YouTube-Echo"
+repository = "https://github.com/itsmohitkumar/YouTube-Echo"
+keywords = ["YouTube", "summary", "Flask", "AI"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+youtube-transcript-api = "^0.4.5"
+langchain-community = "^0.1.0"
+langchain-openai = "^0.1.0"
+langchain-text-splitters = "^0.1.0"
+streamlit = "^1.5.0"
+watchdog = "^2.1.6"
+pytest = "^7.2.0"
+peewee = "^3.14.4"
+python-dotenv = "^0.19.2"
+chromadb = "^0.3.0"
+langchain-chroma = "^0.1.0"
+randomname = "^0.1.1"
+tiktoken = "^0.2.0"
+openai-whisper = "^1.0.0"
+pytubefix = "^0.0.1"
+pytest-mock = "^3.6.0"
+flask = "^2.1.1"
+gunicorn = "^20.1.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.2.0"
+pytest-mock = "^3.6.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
