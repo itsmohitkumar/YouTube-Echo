@@ -13,4 +13,4 @@ langchain-chroma
 randomname
 tiktoken
 openai-whisper
-pytube
+pytubefix

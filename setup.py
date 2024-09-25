@@ -22,7 +22,7 @@ setup(
         'randomname',
         'tiktoken',
         'openai-whisper',
-        'pytube',
+        'pytubefix',
     ],
     entry_points={
         'console_scripts': [
