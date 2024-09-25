@@ -9,6 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    
     # Step 1: Checkout the code from the repository
     - name: Checkout code
       uses: actions/checkout@v3
@@ -33,7 +34,7 @@ jobs:
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}  # Your Docker Hub username
-        password: ${{ secrets.DOCKERHUB_TOKEN }}      # Your Docker Hub PAT (Token)
+        password: ${{ secrets.DOCKERHUB_TOKEN }}     # Your Docker Hub PAT (Token)
 
     # Step 4: Build the Docker image
     - name: Build the Docker image
