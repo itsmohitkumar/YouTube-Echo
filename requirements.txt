@@ -14,3 +14,4 @@ randomname
 tiktoken
 openai-whisper
 pytubefix
+flask
