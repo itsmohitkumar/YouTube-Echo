@@ -27,7 +27,8 @@ openai-whisper = "^20231117"
 pytubefix = "^7.0.0"
 flask = "^3.0.3"
 gunicorn = "^23.0.0"
-torch = "^2.2.2"
+torch = "2.2.2"
+triton = "2.2.0"
 
 # Added dependencies from requirements.txt
 aiohappyeyeballs = "^2.4.0"
