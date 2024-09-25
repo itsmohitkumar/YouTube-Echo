@@ -1,4 +1,3 @@
-'''
 # Workflow to Build and Deploy a Docker Image
 
 name: Build and Deploy Docker Image
@@ -75,5 +74,3 @@ jobs:
         # Use this step if you want to trigger Render deployment.
         # Uncomment the line below if you're using the Render CLI.
         # render deploy service $RENDER_SERVICE_ID --api-key ${{ secrets.RENDER_API_TOKEN }}
-
-'''

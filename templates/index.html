@@ -119,6 +119,13 @@
         .follow-up-section h2 {
             text-align: left;
         }
+        .api-key-prompt {
+            display: none; /* Hide API key prompt by default */
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #333; /* Dark background for API key prompt */
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -127,6 +134,14 @@
             <i class="fab fa-youtube" style="color: red; margin-right: 8px;"></i>
             {{ app_title }}
         </h1>
+
+        <div id="api-key-section" class="api-key-prompt" style="display: {{ 'none' if api_key_exists else 'block' }};">
+            <label for="api_key">OpenAI API Key:</label>
+            <input type="text" id="api_key" name="api_key" placeholder="Enter your OpenAI API Key">
+            <button id="save-api-key">Save API Key</button>
+            <div id="api-key-message" style="color: #28a745; display: none;">API Key saved successfully!</div>
+        </div>
+
         <form id="summarize-form">
             <label for="video_url">YouTube Video URL:
                 <span class="info-container">
@@ -205,79 +220,51 @@
         <div class="result" id="result-section" style="display: none;">
             <h2>Summary</h2>
             <pre id="summary"></pre>
-            <h5>Cost$: <span id="cost"></span></h5> <!-- Added cost display -->
-        </div>
-
-        <div class="follow-up-section" style="display: none;">
-            <h2>Ask a Follow-Up Question</h2>
-            <form id="follow-up-form">
-                <input type="text" id="followup_question" name="followup_question" placeholder="Type your question here" required>
-                <button type="submit">Ask</button>
-            </form>
-            <div class="result" id="followup-result" style="display: none;">
-                <h2>Follow-Up Answer</h2>
-                <pre id="followup-response"></pre>
-                <h5>Cost$: <span id="followup-cost"></span></h5> <!-- Added follow-up cost display -->
+            <div class="follow-up-section" id="follow-up-section">
+                <h2>Follow-up Questions</h2>
+                <pre id="follow_up_questions"></pre>
             </div>
         </div>
     </div>
 
     <script>
         function showTooltip(event, text) {
-            const tooltip = document.getElementById('tooltip');
-            tooltip.innerText = text;
-            tooltip.style.display = 'block';
-            tooltip.style.left = (event.pageX + 5) + 'px'; // Positioning right next to the icon
-            tooltip.style.top = (event.pageY - 25) + 'px'; // Positioning above the icon
+            const tooltip = document.getElementById("tooltip");
+            tooltip.textContent = text;
+            tooltip.style.display = "block";
+            tooltip.style.top = event.clientY + "px";
+            tooltip.style.left = event.clientX + "px";
         }
 
         function hideTooltip() {
-            const tooltip = document.getElementById('tooltip');
-            tooltip.style.display = 'none';
+            const tooltip = document.getElementById("tooltip");
+            tooltip.style.display = "none";
         }
 
-        document.getElementById('summarize-form').onsubmit = async function(event) {
-            event.preventDefault();
-            document.getElementById('loading').style.display = 'block'; // Show loading spinner
+        document.getElementById("summarize-form").addEventListener("submit", function (e) {
+            e.preventDefault();
+            document.getElementById("loading").style.display = "block";
             const formData = new FormData(this);
-            const response = await fetch('/summarize', {
-                method: 'POST',
-                body: formData,
+            fetch("/summarize", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("result-section").style.display = "block";
+                document.getElementById("summary").textContent = data.summary;
+                document.getElementById("follow_up_questions").textContent = data.follow_up_questions;
             });
-            const result = await response.json();
-            document.getElementById('loading').style.display = 'none'; // Hide loading spinner
+        });
 
-            if (result.summary) {
-                document.getElementById('summary').innerText = result.summary;
-
-                // Round the cost to 5 decimal places and display
-                document.getElementById('cost').innerText = parseFloat(result.cost).toFixed(5); // Round to 5 decimal places
-                document.getElementById('result-section').style.display = 'block';
-                document.querySelector('.follow-up-section').style.display = 'block'; // Show follow-up section
-            } else {
-                alert('Error: ' + result.error);
-            }            
-        };
-
-        document.getElementById('follow-up-form').onsubmit = async function(event) {
-            event.preventDefault();
-            const followupQuestion = document.getElementById('followup_question').value;
-            const response = await fetch('/ask_followup', {
-                method: 'POST',
-                body: new URLSearchParams({ followup_question: followupQuestion }),
-            });
-            const result = await response.json();
-
-            if (result.response) {
-                document.getElementById('followup-response').innerText = result.response;
-
-                // Round the follow-up cost to 5 decimal places and display
-                document.getElementById('followup-cost').innerText = parseFloat(result.cost).toFixed(5); // Round to 5 decimal places
-                document.getElementById('followup-result').style.display = 'block';
-            } else {
-                alert('Error: ' + result.error);
-            }            
-        };
+        document.getElementById("save-api-key").addEventListener("click", function () {
+            const apiKey = document.getElementById("api_key").value;
+            if (apiKey) {
+                // Here you would normally save the API key securely
+                document.getElementById("api-key-message").style.display = "block";
+            }
+        });
     </script>
 </body>
 </html>

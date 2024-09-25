@@ -145,12 +145,17 @@ def index():
     app_title = config["app_title"]
     available_gpt_models = config["available_models"]["gpts"]
     available_embeddings = config["available_models"]["embeddings"]
+
+    # Check if API key exists in environment variables
+    api_key_exists = os.getenv("OPENAI_API_KEY") is not None
+
     return render_template(
         'index.html',
         app_title=app_title,
         available_gpt_models=available_gpt_models,
         available_embeddings=available_embeddings,
-        config_data=config  # Pass the entire config data as config_data
+        config_data=config,  # Pass the entire config data as config_data
+        api_key_exists=api_key_exists  # Pass API key existence status
     )
 
 @app.route('/summarize', methods=['POST'])
@@ -163,8 +168,16 @@ def summarize():
     model = request.form.get('model', config["default_model"]["gpt"])
 
     youtube_echo = YoutubeEcho()
-    if not youtube_echo.is_api_key_valid(os.getenv("OPENAI_API_KEY")):
-        return jsonify({'error': 'Invalid API Key'})
+    
+    # Check if API key is in environment variables
+    api_key = os.getenv("OPENAI_API_KEY")
+
+    if not api_key:
+        # If API key is not found in the environment, return error response
+        return jsonify({'error': 'Invalid or missing OpenAI API Key'})
+
+    # Set the API key in the environment variable for OpenAI
+    openai.api_key = api_key
 
     summary, cost = youtube_echo.summarize_video(video_url, custom_prompt, temperature, top_p, model)
 
