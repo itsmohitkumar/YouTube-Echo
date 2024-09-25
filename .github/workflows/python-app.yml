@@ -29,12 +29,16 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    # Step 4: Run tests (assuming you have a test suite)
+    # Step 4: Set environment variable for LANGCHAIN_API_KEY
+    - name: Set environment variable
+      run: echo "LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }}" >> $GITHUB_ENV
+
+    # Step 5: Run tests (assuming you have a test suite)
     - name: Run tests
       run: |
         pytest  # or any other test framework you use
 
-    # Step 5: Linting (Optional)
+    # Step 6: Linting (Optional)
     - name: Lint code with flake8
       run: |
         pip install flake8
