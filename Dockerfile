@@ -5,6 +5,12 @@ FROM python:3.9.20-slim
 ENV LANGCHAIN_TRACING_V2=true
 ENV LANGCHAIN_PROJECT=YouTube-Echo
 
+# Accept the LANGCHAIN_API_KEY as a build argument
+ARG LANGCHAIN_API_KEY
+
+# Set it as an environment variable
+ENV LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
+
 # Set working directory
 WORKDIR /app
 
