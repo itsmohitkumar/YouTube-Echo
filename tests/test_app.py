@@ -35,7 +35,7 @@ def test_summarize_valid_request(client, mocker):
         'model': 'gpt-3.5-turbo'
     }
 
-    response = client.post('/summarize', data=data)  # Change here
+    response = client.post('/summarize', data=json.dumps(data), content_type='application/json')  # Add content_type
     response_json = json.loads(response.data)
 
     assert response.status_code == 200
@@ -56,11 +56,10 @@ def test_summarize_invalid_api_key(client, mocker):
         'model': 'gpt-3.5-turbo'
     }
 
-    response = client.post('/summarize', data=data)
+    response = client.post('/summarize', data=json.dumps(data), content_type='application/json')  # Add content_type
     response_json = json.loads(response.data)
 
-    # Check the response status code; adjust if your app responds differently
-    assert response.status_code == 401  # Change to 401 as per the logs
+    assert response.status_code == 401
     assert 'error' in response_json
     assert response_json['error'] == 'Invalid or missing OpenAI API Key'
 

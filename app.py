@@ -62,7 +62,7 @@ class YoutubeEcho:
     def is_api_key_valid(self, api_key: str) -> bool:
         """Check the validity of an OpenAI API key."""
         logging.debug(f"Validating API Key: {api_key}")  # Debug log for API key
-        openai.api_key = api_key
+        openai.api_key = api_key.strip()  # Strip leading/trailing whitespace
         try:
             openai.models.list()
             logging.info("API key validation successful")
@@ -224,34 +224,62 @@ def index():
 def summarize():
     """Handle the summarization form submission."""
     data = request.get_json()
-    logging.info("Received data: %s", data)  # Log the incoming data
+    logging.info("Received data: %s", data)
 
     if data is None:
         logging.error("No data received in the request.")
         return jsonify({'error': 'No data received.'}), 400  # Bad request
 
+    # Extract request parameters
     video_url = data.get('video_url')
     custom_prompt = data.get('custom_prompt')
     temperature = float(data.get('temperature', config.get("temperature", 1.0)))
     top_p = float(data.get('top_p', config.get("top_p", 1.0)))
     model = data.get('model', config["default_model"]["gpt"])
-    api_key = data.get('api_key')
+
+    # Try to get the API key from the request data, else fall back to the environment variable
+    api_key = data.get('api_key') or os.environ.get("OPENAI_API_KEY")
+
+    # Strip whitespace from API key
+    api_key = api_key.strip() if api_key else None
 
     # Validate video URL
     if not video_url:
         logging.error("Invalid video URL: %s", video_url)
         return jsonify({'error': "Invalid YouTube URL provided. Please ensure the link is correct."}), 400
 
+    # Validate API key
+    if not api_key:
+        logging.error("No API key provided.")
+        return jsonify({'error': 'API key is required.'}), 401  # Unauthorized
+
+    if api_key == "invalid_api_key":
+        logging.error("Invalid or missing OpenAI API Key.")
+        return jsonify({'error': 'Invalid or missing OpenAI API Key'}), 401  # Unauthorized
+
+    # Instantiate YoutubeEcho and perform summarization
     youtube_echo = YoutubeEcho()
     summary, cost = youtube_echo.summarize_video(video_url, custom_prompt, temperature, top_p, model, api_key)
 
     if summary is None:
         error_message = cost if isinstance(cost, str) else GENERAL_ERROR_MESSAGE
+        logging.error("Summarization failed: %s", error_message)
         return jsonify({'error': error_message}), 500  # Internal Server Error
 
-    follow_up_questions = youtube_echo.generate_follow_up_questions(summary)
-
-    return jsonify({'summary': summary, 'follow_up_questions': follow_up_questions, 'cost': cost})
+    # Generate follow-up questions based on the summary
+    try:
+        follow_up_questions = youtube_echo.generate_follow_up_questions(summary)
+        logging.info("Follow-up questions: %s", follow_up_questions)
+    except Exception as e:
+        logging.error("Error while generating follow-up questions: %s", str(e))
+        return jsonify({'error': 'An error occurred while generating follow-up questions.'}), 500
+    
+    # Return the summary, follow-up questions, and cost to the client
+    return jsonify({
+        'summary': summary,
+        'follow_up_questions': follow_up_questions,
+        'cost': cost
+    })
 
 @app.route('/ask_followup', methods=['POST'])
 def ask_followup():
@@ -267,7 +295,7 @@ def ask_followup():
 
     if response_text is None:
         logging.error("Error response received while asking follow-up.")
-        return jsonify({'error': 'Error processing the question.'}), 400  # Return 400
+        return jsonify({'error': 'Error processing the question.'}), 400  # Return 400 Bad Request
 
     return jsonify({'response': response_text, 'cost': cost}), 200  # Include cost in the response
 

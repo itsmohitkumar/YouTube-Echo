@@ -270,21 +270,32 @@
 
         document.getElementById('submit-follow-up').addEventListener('click', async function() {
             document.getElementById('follow-up-loading').style.display = 'block';
-
+    
             const followUpQuestion = document.getElementById('follow_up_question').value;
-            const summaryText = document.getElementById('summary-text').innerText;
-
+    
+            // Form validation to check if the question is not empty
+            if (!followUpQuestion) {
+                alert('Follow-up question cannot be empty.');
+                document.getElementById('follow-up-loading').style.display = 'none';
+                return;
+            }
+    
             try {
-                const response = await fetch('/follow-up', {
+                const formData = new FormData();
+                formData.append('followup_question', followUpQuestion);
+    
+                const response = await fetch('/ask_followup', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ follow_up_question: followUpQuestion, summary_text: summaryText })
+                    body: formData // Sending data in form format as the server expects it
                 });
-
+    
                 const result = await response.json();
-                document.getElementById('follow-up-response').innerText = result.answer;
+    
+                if (result.error) {
+                    alert(result.error);
+                } else {
+                    document.getElementById('follow-up-response').innerText = result.response;
+                }
             } catch (error) {
                 console.error('Error:', error);
                 alert('An error occurred while submitting the follow-up question. Please try again.');
@@ -292,13 +303,7 @@
                 document.getElementById('follow-up-loading').style.display = 'none';
             }
         });
-
-        document.getElementById('save-api-key').addEventListener('click', function() {
-            const apiKey = document.getElementById('api_key').value;
-            // Save the API key logic goes here
-            document.getElementById('api-key-message').style.display = 'block';
-        });
-
+        
         function showTooltip(event, message) {
             const tooltip = document.getElementById('tooltip');
             tooltip.innerText = message;
