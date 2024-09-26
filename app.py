@@ -74,21 +74,21 @@ class YoutubeEcho:
         return False
 
     @traceable  # Auto-trace this method
-    def summarize_video(self, video_url, custom_prompt=None, temperature=None, top_p=None, model=None):
-        # Validate API keys
-        openai_api_key = os.getenv("OPENAI_API_KEY")
-        langchain_api_key = os.getenv("LANGCHAIN_API_KEY")
+    def summarize_video(self, video_url, custom_prompt=None, temperature=None, top_p=None, model=None, api_key=None):
+        # Get API key from either function argument or environment
+        openai_api_key = api_key or os.getenv("OPENAI_API_KEY")
 
-        # Check OpenAI API Key validity
         if not openai_api_key:
-            logging.error("OpenAI API Key is not set. Please check your environment variables.")
+            logging.error("OpenAI API Key is not set. Please check your environment variables or input.")
             return None, "OpenAI API Key is not set."
 
-        if not self.is_api_key_valid(openai_api_key):  # Pass the openai_api_key here
+        # Check OpenAI API Key validity
+        if not self.is_api_key_valid(openai_api_key):
             logging.error("Invalid or missing OpenAI API Key.")
             return None, 'Invalid or missing OpenAI API Key'
 
-        # Existing validation for LangChain API key
+        # Get LangChain API key from environment
+        langchain_api_key = os.getenv("LANGCHAIN_API_KEY")
         if not langchain_api_key:
             logging.error("Invalid or missing LangChain API Key.")
             return None, 'Invalid or missing LangChain API Key'
@@ -114,7 +114,7 @@ class YoutubeEcho:
             # Initialize OpenAI callback and language model
             cb = OpenAICallbackHandler()
             llm = ChatOpenAI(
-                api_key=openai_api_key,
+                api_key=openai_api_key,  # Use the passed or environment key
                 temperature=temperature,
                 model=model,
                 top_p=top_p,
@@ -206,9 +206,19 @@ def summarize():
     top_p = float(request.form.get('top_p', config.get("top_p", 1.0)))
     model = request.form.get('model', config["default_model"]["gpt"])
 
+    # Get the API key from the form if provided
+    api_key = request.form.get('api_key')
+
+    # Log the received API key
+    if api_key:
+        logging.info(f"Received API Key.")
+    else:
+        logging.info("No API Key provided from form; falling back to environment.")
+
     youtube_echo = YoutubeEcho()
 
-    summary, cost = youtube_echo.summarize_video(video_url, custom_prompt, temperature, top_p, model)
+    # Pass the API key (if any) to the summarization method
+    summary, cost = youtube_echo.summarize_video(video_url, custom_prompt, temperature, top_p, model, api_key)
 
     if summary:
         return jsonify({'summary': summary, 'cost': cost})  # Return summary and cost

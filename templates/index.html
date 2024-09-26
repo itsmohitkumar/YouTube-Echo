@@ -244,7 +244,17 @@
         document.getElementById("summarize-form").addEventListener("submit", function (e) {
             e.preventDefault();
             document.getElementById("loading").style.display = "block";
+        
+            // Create a FormData object
             const formData = new FormData(this);
+        
+            // Check if the API key is provided and append it to the form data
+            const apiKey = document.getElementById("api_key").value;
+            if (apiKey) {
+                formData.append('api_key', apiKey);
+            }
+        
+            // Make the POST request to the Flask app
             fetch("/summarize", {
                 method: "POST",
                 body: formData
@@ -254,10 +264,14 @@
                 document.getElementById("loading").style.display = "none";
                 document.getElementById("result-section").style.display = "block";
                 document.getElementById("summary").textContent = data.summary;
-                document.getElementById("follow_up_questions").textContent = data.follow_up_questions;
+                document.getElementById("follow_up_questions").textContent = data.follow_up_questions || 'No follow-up questions available';
+            })
+            .catch(error => {
+                document.getElementById("loading").style.display = "none";
+                console.error('Error:', error);
             });
         });
-
+        
         document.getElementById("save-api-key").addEventListener("click", function () {
             const apiKey = document.getElementById("api_key").value;
             if (apiKey) {
