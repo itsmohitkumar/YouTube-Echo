@@ -61,6 +61,7 @@ class YoutubeEcho:
 
     def is_api_key_valid(self, api_key: str) -> bool:
         """Check the validity of an OpenAI API key."""
+        logging.debug(f"Validating API Key: {api_key}")  # Debug log for API key
         openai.api_key = api_key
         try:
             openai.models.list()
@@ -79,6 +80,10 @@ class YoutubeEcho:
         langchain_api_key = os.getenv("LANGCHAIN_API_KEY")
 
         # Check OpenAI API Key validity
+        if not openai_api_key:
+            logging.error("OpenAI API Key is not set. Please check your environment variables.")
+            return None, "OpenAI API Key is not set."
+
         if not self.is_api_key_valid(openai_api_key):  # Pass the openai_api_key here
             logging.error("Invalid or missing OpenAI API Key.")
             return None, 'Invalid or missing OpenAI API Key'
@@ -136,9 +141,14 @@ class YoutubeEcho:
     def ask_followup_question(self, followup_question: str):
         """Process the follow-up question using stored summary and JSON data."""
         try:
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+            if not openai_api_key:
+                logging.error("OpenAI API Key is not set. Please check your environment variables.")
+                return None, "OpenAI API Key is not set."
+
             cb = OpenAICallbackHandler()
             llm = ChatOpenAI(
-                api_key=os.getenv("OPENAI_API_KEY"),
+                api_key=openai_api_key,
                 temperature=config.get("temperature", 1.0),
                 model=config["default_model"]["gpt"],
                 callbacks=[cb],
