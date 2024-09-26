@@ -12,11 +12,9 @@ jobs:
   dockerbuild:
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Build the Docker Image
       - name: Build Docker Image
         run: |
           docker build . --file Dockerfile --tag workflow-test:$(date +%s) --build-arg LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }}
@@ -26,57 +24,48 @@ jobs:
     needs: dockerbuild
 
     steps:
-      # Step 1: Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Set up Python environment
       - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: '3.9.20'
 
-      # Step 3: Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Step 4: Set environment variable for LANGCHAIN_API_KEY
       - name: Set environment variable
         run: echo "LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }}" >> $GITHUB_ENV
 
-      # Step 5: Run tests (assuming you have a test suite)
       - name: Run tests
         run: pytest
 
-      # Step 6: Linting (Optional)
       - name: Lint code with flake8
         run: |
           pip install flake8
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
   build-and-publish:
-    needs: test  # Ensure tests pass before publishing
+    needs: test
     runs-on: ubuntu-latest
+    environment: YouTube-Echo  # Specify the environment
 
     steps:
-      # Step 1: Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      # Step 3: Login to DockerHub
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Step 4: Build and push Docker image to DockerHub
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
@@ -87,26 +76,5 @@ jobs:
           build-args: |
             LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }}
 
-      # Step 5: Output Docker image digest
       - name: Image digest
         run: echo ${{ steps.build-and-publish.outputs.digest }}
-
-  deploy-to-render:
-    needs: build-and-publish  # Ensure the image is built and pushed before deploying
-    runs-on: ubuntu-latest
-
-    steps:
-      # Step 1: Checkout code
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # Step 2: Deploy to Render
-      - name: Deploy to Render
-        run: |
-          curl -X POST "https://api.render.com/v1/deploys" \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "serviceId": "YOUR_SERVICE_ID",
-              "branch": "main"
-            }'
