@@ -1,7 +1,7 @@
 # Use a base Python image
 FROM python:3.9.20-slim
 
-# Set environment variables (these should be set during runtime)
+# Set environment variables
 ENV LANGCHAIN_TRACING_V2=true
 ENV LANGCHAIN_PROJECT=YouTube-Echo
 

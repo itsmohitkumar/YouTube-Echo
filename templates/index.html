@@ -8,8 +8,8 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #121212; /* Dark background for better eye comfort */
-            color: #f0f0f0; /* Light text for contrast */
+            background-color: #121212;
+            color: #f0f0f0;
             margin: 0;
             padding: 0;
         }
@@ -17,15 +17,15 @@
             max-width: 600px;
             margin: 50px auto;
             padding: 20px;
-            background: #1e1e1e; /* Slightly lighter background for the container */
+            background: #1e1e1e;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         }
         h1 {
             text-align: center;
-            color: #ffffff; /* White text for headings */
+            color: #ffffff;
         }
-        h2 {
+        h2, h3 {
             color: #ffffff;
             margin-bottom: 10px;
         }
@@ -42,7 +42,7 @@
         .info-icon {
             margin-left: 5px;
             cursor: pointer;
-            color: #ffffff; /* White color for icons */
+            color: #ffffff;
         }
         .tooltip {
             display: none;
@@ -53,7 +53,7 @@
             border-radius: 4px;
             font-size: 12px;
             z-index: 100;
-            white-space: nowrap; /* Prevent text wrapping */
+            white-space: nowrap;
         }
         .info-container {
             position: relative;
@@ -65,10 +65,10 @@
         select {
             margin-bottom: 15px;
             padding: 10px;
-            border: 1px solid #555; /* Darker border for inputs */
+            border: 1px solid #555;
             border-radius: 4px;
-            background-color: #2a2a2a; /* Darker input background */
-            color: #ffffff; /* Light text in inputs */
+            background-color: #2a2a2a;
+            color: #ffffff;
         }
         button {
             padding: 10px;
@@ -86,45 +86,43 @@
         .result, .follow-up-section {
             margin-top: 20px;
             padding: 10px;
-            background-color: #333; /* Dark background for results */
+            background-color: #333;
             border-radius: 4px;
             max-height: 200px;
-            overflow-y: auto; /* Enable vertical scrolling */
+            overflow-y: auto;
         }
         pre {
-            white-space: pre-wrap; /* Allow text to wrap */
-            word-wrap: break-word; /* Break long words */
-            margin: 0; /* Remove default margins */
-            color: #f0f0f0; /* Light text for preformatted text */
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 0;
+            color: #f0f0f0;
         }
         .loading {
-            display: none; /* Hide loading by default */
-            text-align: center; /* Center align */
-            margin-top: 10px; /* Space above loading spinner */
+            display: none;
+            text-align: center;
+            margin-top: 10px;
         }
         .spinner {
-            border: 5px solid #f3f3f3; /* Light background */
-            border-top: 5px solid #3498db; /* Blue top */
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
             border-radius: 50%;
             width: 30px;
             height: 30px;
-            animation: spin 1s linear infinite; /* Spin animation */
+            animation: spin 1s linear infinite;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        /* Align summary and follow-up section to the left */
         .result h2,
         .follow-up-section h2 {
             text-align: left;
         }
         .api-key-prompt {
-            display: none; /* Hide API key prompt by default */
+            display: none;
             margin-top: 20px;
             padding: 10px;
-            background-color: #333; /* Dark background for API key prompt */
-            border-radius: 4px;
+            background-color: #333;
         }
     </style>
 </head>
@@ -217,68 +215,102 @@
             </div>
         </form>
 
-        <div class="result" id="result-section" style="display: none;">
-            <h2>Summary</h2>
-            <pre id="summary"></pre>
-            <div class="follow-up-section" id="follow-up-section">
-                <h2>Follow-up Questions</h2>
-                <pre id="follow_up_questions"></pre>
+        <div class="result" id="summary-result" style="display:none;">
+            <h2>Summary:</h2>
+            <pre id="summary-text"></pre>
+        </div>
+
+        <div class="follow-up-section" id="follow-up-section" style="display:none;">
+            <h2>Ask a Follow-Up Question:</h2>
+            <input type="text" id="follow_up_question" placeholder="Your question here...">
+            <button id="submit-follow-up">Submit Question</button>
+            <div class="loading" id="follow-up-loading" style="display:none;">
+                <div class="spinner"></div>
             </div>
+            <div id="follow-up-response" style="margin-top: 10px;"></div>
         </div>
     </div>
 
     <script>
-        function showTooltip(event, text) {
-            const tooltip = document.getElementById("tooltip");
-            tooltip.textContent = text;
-            tooltip.style.display = "block";
-            tooltip.style.top = event.clientY + "px";
-            tooltip.style.left = event.clientX + "px";
+        document.getElementById('summarize-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            document.getElementById('loading').style.display = 'block';
+
+            // Collecting the input values
+            const formData = {
+                video_url: document.getElementById('video_url').value,
+                custom_prompt: document.getElementById('custom_prompt').value,
+                temperature: parseFloat(document.getElementById('temperature').value),
+                top_p: parseFloat(document.getElementById('top_p').value),
+                embedding_model: document.getElementById('embedding_model').value,
+                model: document.getElementById('model').value
+            };
+
+            try {
+                const response = await fetch('/summarize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                document.getElementById('summary-text').innerText = result.summary;
+                document.getElementById('summary-result').style.display = 'block';
+                document.getElementById('follow-up-section').style.display = 'block';
+                document.getElementById('follow_up_question').focus();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while summarizing the video. Please try again.');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+
+        document.getElementById('submit-follow-up').addEventListener('click', async function() {
+            document.getElementById('follow-up-loading').style.display = 'block';
+
+            const followUpQuestion = document.getElementById('follow_up_question').value;
+            const summaryText = document.getElementById('summary-text').innerText;
+
+            try {
+                const response = await fetch('/follow-up', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ follow_up_question: followUpQuestion, summary_text: summaryText })
+                });
+
+                const result = await response.json();
+                document.getElementById('follow-up-response').innerText = result.answer;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while submitting the follow-up question. Please try again.');
+            } finally {
+                document.getElementById('follow-up-loading').style.display = 'none';
+            }
+        });
+
+        document.getElementById('save-api-key').addEventListener('click', function() {
+            const apiKey = document.getElementById('api_key').value;
+            // Save the API key logic goes here
+            document.getElementById('api-key-message').style.display = 'block';
+        });
+
+        function showTooltip(event, message) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerText = message;
+            tooltip.style.display = 'block';
+            tooltip.style.left = event.pageX + 'px';
+            tooltip.style.top = (event.pageY + 20) + 'px';
         }
 
         function hideTooltip() {
-            const tooltip = document.getElementById("tooltip");
-            tooltip.style.display = "none";
+            const tooltip = document.getElementById('tooltip');
+            tooltip.style.display = 'none';
         }
-
-        document.getElementById("summarize-form").addEventListener("submit", function (e) {
-            e.preventDefault();
-            document.getElementById("loading").style.display = "block";
-        
-            // Create a FormData object
-            const formData = new FormData(this);
-        
-            // Check if the API key is provided and append it to the form data
-            const apiKey = document.getElementById("api_key").value;
-            if (apiKey) {
-                formData.append('api_key', apiKey);
-            }
-        
-            // Make the POST request to the Flask app
-            fetch("/summarize", {
-                method: "POST",
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById("loading").style.display = "none";
-                document.getElementById("result-section").style.display = "block";
-                document.getElementById("summary").textContent = data.summary;
-                document.getElementById("follow_up_questions").textContent = data.follow_up_questions || 'No follow-up questions available';
-            })
-            .catch(error => {
-                document.getElementById("loading").style.display = "none";
-                console.error('Error:', error);
-            });
-        });
-        
-        document.getElementById("save-api-key").addEventListener("click", function () {
-            const apiKey = document.getElementById("api_key").value;
-            if (apiKey) {
-                // Here you would normally save the API key securely
-                document.getElementById("api-key-message").style.display = "block";
-            }
-        });
     </script>
 </body>
 </html>

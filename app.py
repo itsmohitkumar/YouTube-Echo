@@ -130,8 +130,18 @@ class YoutubeEcho:
         except KeyError as e:
             logging.error("KeyError: %s", str(e))
             return None, "Error retrieving video metadata: missing required information."
-        except (InvalidUrlException, NoTranscriptReceivedException, TranscriptException) as e:
-            logging.error("Error: %s", str(e))
+        except InvalidUrlException as e:
+            logging.error("Invalid URL: %s", str(e))
+            return None, "Invalid YouTube URL provided. Please ensure the link is correct."
+        except NoTranscriptReceivedException as e:
+            logging.error("No Transcript Received: %s", str(e))
+            return None, (
+                "Unfortunately, no transcript was found for this video. "
+                "This could be due to subtitles being disabled for this video. "
+                "Please check if subtitles are available or try a different video."
+            )
+        except TranscriptException as e:
+            logging.error("Transcript Exception: %s", str(e))
             return None, str(e)
         except Exception as e:
             logging.error("Unexpected error: %s", str(e), exc_info=True)
@@ -177,6 +187,19 @@ class YoutubeEcho:
         except Exception as e:
             logging.error("Error processing follow-up question: %s", str(e))
             return None, "Error processing the question."
+    
+    @traceable  # Auto-trace this method
+    def generate_follow_up_questions(self, summary):
+        """Generate follow-up questions based on the summary."""
+        if summary:
+            # Example questions; replace this logic with more advanced question generation if needed
+            questions = [
+                f"What are the main points of the summary?",
+                f"Can you elaborate on the key themes discussed?",
+                f"What are some implications of the summary's content?"
+            ]
+            return questions
+        return []
 
 @app.route('/')
 def index():
@@ -200,43 +223,53 @@ def index():
 @app.route('/summarize', methods=['POST'])
 def summarize():
     """Handle the summarization form submission."""
-    video_url = request.form.get('video_url')
-    custom_prompt = request.form.get('custom_prompt')
-    temperature = float(request.form.get('temperature', config.get("temperature", 1.0)))
-    top_p = float(request.form.get('top_p', config.get("top_p", 1.0)))
-    model = request.form.get('model', config["default_model"]["gpt"])
+    data = request.get_json()
+    logging.info("Received data: %s", data)  # Log the incoming data
 
-    # Get the API key from the form if provided
-    api_key = request.form.get('api_key')
+    if data is None:
+        logging.error("No data received in the request.")
+        return jsonify({'error': 'No data received.'}), 400  # Bad request
 
-    # Log the received API key
-    if api_key:
-        logging.info(f"Received API Key.")
-    else:
-        logging.info("No API Key provided from form; falling back to environment.")
+    video_url = data.get('video_url')
+    custom_prompt = data.get('custom_prompt')
+    temperature = float(data.get('temperature', config.get("temperature", 1.0)))
+    top_p = float(data.get('top_p', config.get("top_p", 1.0)))
+    model = data.get('model', config["default_model"]["gpt"])
+    api_key = data.get('api_key')
+
+    # Validate video URL
+    if not video_url:
+        logging.error("Invalid video URL: %s", video_url)
+        return jsonify({'error': "Invalid YouTube URL provided. Please ensure the link is correct."}), 400
 
     youtube_echo = YoutubeEcho()
-
-    # Pass the API key (if any) to the summarization method
     summary, cost = youtube_echo.summarize_video(video_url, custom_prompt, temperature, top_p, model, api_key)
 
-    if summary:
-        return jsonify({'summary': summary, 'cost': cost})  # Return summary and cost
-    else:
-        return jsonify({'error': cost})
+    if summary is None:
+        error_message = cost if isinstance(cost, str) else GENERAL_ERROR_MESSAGE
+        return jsonify({'error': error_message}), 500  # Internal Server Error
+
+    follow_up_questions = youtube_echo.generate_follow_up_questions(summary)
+
+    return jsonify({'summary': summary, 'follow_up_questions': follow_up_questions, 'cost': cost})
 
 @app.route('/ask_followup', methods=['POST'])
 def ask_followup():
-    """Handle follow-up question submissions."""
+    """Handle the follow-up question submission."""
     followup_question = request.form.get('followup_question')
 
-    youtube_echo = YoutubeEcho()
-    response, cost = youtube_echo.ask_followup_question(followup_question)
+    if not followup_question:
+        logging.error("No follow-up question provided.")
+        return jsonify({'error': 'Follow-up question cannot be empty.'}), 400  # Bad request
 
-    if response:
-        return jsonify({'response': response, 'cost': cost})
-    else:
-        return jsonify({'error': cost})
+    youtube_echo = YoutubeEcho()
+    response_text, cost = youtube_echo.ask_followup_question(followup_question)
+
+    if response_text is None:
+        logging.error("Error response received while asking follow-up.")
+        return jsonify({'error': 'Error processing the question.'}), 400  # Return 400
+
+    return jsonify({'response': response_text, 'cost': cost}), 200  # Include cost in the response
 
 if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5000)  # Set debug to False for production
+    app.run(debug=False)  # Set to False in production
